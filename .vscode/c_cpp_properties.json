@@ -1,0 +1,18 @@
+{
+    "configurations": [
+        {
+            "name": "Docker Ubuntu 22.04",
+            "includePath": [
+                "/usr/lib/gcc/x86_64-linux-gnu/11/include",
+                "/usr/include/x86_64-linux-gnu",
+                "/usr/local/include",
+                "/usr/include"
+            ],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}
