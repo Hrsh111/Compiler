@@ -31,6 +31,7 @@ void ignoreComment(TwinBuffer *B);
 void flush(char *str);
 void createToken(tokenInfo *tk, terminals tokenType, int line, const char *lexeme);
 char fetchNextChar(void);
+void recoverFromError(TwinBuffer *B);
 
 
 int isKeyword(const char *lex);

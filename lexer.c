@@ -15,8 +15,8 @@ bool ldfirstBuff;
 bool ldsecondBuff;
 TwinBuffer twinBuffer;
 
-Symboltable *table = NULL;      
-keyword *kwEntries[KC] = {NULL}; 
+Symboltable *table = NULL;
+keyword *kwEntries[KC] = {NULL};
 
 FILE *initialise(char *inputFile)
 {
@@ -26,7 +26,6 @@ FILE *initialise(char *inputFile)
         printf("ERROR! File not opened.\n");
         return NULL;
     }
-
 
     int size = fread(twinBuffer.buffer1, sizeof(char), BUFFER_SIZE, srcFile);
     if (size < BUFFER_SIZE)
@@ -38,7 +37,6 @@ FILE *initialise(char *inputFile)
     {
         exhaustedInput = false;
     }
-
 
     activeBuffer = 1;
     ldfirstBuff = true;
@@ -53,18 +51,18 @@ FILE *initialise(char *inputFile)
 FILE *getStream(FILE *fp)
 {
     if (exhaustedInput)
-        return NULL; 
+        return NULL;
 
     if (activeBuffer == 1)
     {
-       
+
         size_t bytesRead = fread(twinBuffer.buffer2, sizeof(char), BUFFER_SIZE, fp);
         if (bytesRead < BUFFER_SIZE)
         {
             twinBuffer.buffer2[bytesRead] = EOF;
             exhaustedInput = true;
         }
-        forward = twinBuffer.buffer2; 
+        forward = twinBuffer.buffer2;
         activeBuffer = 2;
         ldsecondBuff = true;
     }
@@ -88,34 +86,35 @@ FILE *getStream(FILE *fp)
 void initializeKeywords()
 {
     static keyword reservedList[] = {
-                                     {"_main", TK_MAIN},
-                                     {"as", TK_AS},
-                                     {"call", TK_CALL},
-                                     {"definetype", TK_DEFINETYPE},
-                                     {"else", TK_ELSE},
-                                     {"end", TK_END},
-                                     {"endif", TK_ENDIF},
-                                     {"endrecord", TK_ENDRECORD},
-                                     {"endunion", TK_ENDUNION},
-                                     {"endwhile", TK_ENDWHILE},
-                                     {"global", TK_GLOBAL},
-                                     {"if", TK_IF},
-                                     {"input", TK_INPUT},
-                                     {"int", TK_INT},
-                                     {"list", TK_LIST},
-                                     {"output", TK_OUTPUT},
-                                     {"parameters", TK_PARAMETERS},
-                                     {"parameter", TK_PARAMETER},
-                                     {"read", TK_READ},
-                                     {"real", TK_REAL},
-                                     {"record", TK_RECORD},
-                                     {"return", TK_RETURN},
-                                     {"then", TK_THEN},
-                                     {"type", TK_TYPE},
-                                     {"union", TK_UNION},
-                                     {"while", TK_WHILE},
-                                     {"with", TK_WITH},
-                                     {"write", TK_WRITE}};
+        {"identifier", TK_ID},
+        {"_main", TK_MAIN},
+        {"as", TK_AS},
+        {"call", TK_CALL},
+        {"definetype", TK_DEFINETYPE},
+        {"else", TK_ELSE},
+        {"end", TK_END},
+        {"endif", TK_ENDIF},
+        {"endrecord", TK_ENDRECORD},
+        {"endunion", TK_ENDUNION},
+        {"endwhile", TK_ENDWHILE},
+        {"global", TK_GLOBAL},
+        {"if", TK_IF},
+        {"input", TK_INPUT},
+        {"int", TK_INT},
+        {"list", TK_LIST},
+        {"output", TK_OUTPUT},
+        {"parameters", TK_PARAMETERS},
+        {"parameter", TK_PARAMETER},
+        {"read", TK_READ},
+        {"real", TK_REAL},
+        {"record", TK_RECORD},
+        {"return", TK_RETURN},
+        {"then", TK_THEN},
+        {"type", TK_TYPE},
+        {"union", TK_UNION},
+        {"while", TK_WHILE},
+        {"with", TK_WITH},
+        {"write", TK_WRITE}};
     for (int i = 0; i < KC; i++)
     {
         kwEntries[i] = (keyword *)malloc(sizeof(keyword));
@@ -273,12 +272,12 @@ void stripComments(char *testcaseFile, char *cleanFile)
 void ignoreComment(TwinBuffer *B)
 {
     char c;
-    printf("Entering ignoreComment at line %d. Starting char: '%c'\n", lineCount, *forward);
+
     while ((c = *forward) != '\n' && c != '\0' && c != EOF)
     {
         incrementForward(B);
     }
-    printf("Exiting ignoreComment. Current char: '%c'\n", *forward);
+
 }
 
 void setBeginToForward(TwinBuffer *B)
@@ -355,20 +354,35 @@ tokenInfo generateToken()
         token.lineNumber = lineCount;
         return token;
     }
+    else if (isalpha(*forward) || *forward == '_') {
+        int i = 0;
 
-    else if (isalpha(*forward))
-    {
-        while (isalnum(*forward) || *forward == '_')
-        {
+        while (isalpha(*forward) || *forward == '_') {
             token.lexeme[i++] = *forward;
             forward++;
         }
         token.lexeme[i] = '\0';
         token.lineNumber = lineCount;
-        token.token = checkKeyword(token.lexeme);
+        
+
+        if (isdigit(*forward)) {
+            token.token = TK_FIELDID;  
+            return token;
+        }
+        
+
+        while (isalnum(*forward) || *forward == '_') {
+            token.lexeme[i++] = *forward;
+            forward++;
+        }
+        token.lexeme[i] = '\0';
+        token.token = checkKeyword(token.lexeme);  
         return token;
     }
     
+    
+    
+
     else
     {
 
@@ -439,7 +453,6 @@ tokenInfo generateToken()
     }
 }
 
-
 int isKeyword(const char *lex)
 {
 
@@ -461,10 +474,34 @@ int isKeyword(const char *lex)
         return 1;
     if (strcmp(lex, "_main") == 0)
         return 1;
-   
+    if (strcmp(lex, "endunion") == 0)
+        return 1;
+    if (strcmp(lex, "definetype") == 0)
+        return 1;
+    if (strcmp(lex, "global") == 0)
+        return 1;
+    if (strcmp(lex, "list") == 0)
+        return 1;
+    if (strcmp(lex, "if") == 0)
+        return 1;
+    if (strcmp(lex, "then") == 0)
+        return 1;
+    if (strcmp(lex, "endif") == 0)
+        return 1;
+    if (strcmp(lex, "read") == 0)
+        return 1;
+    if (strcmp(lex, "write") == 0)
+        return 1;
+    if (strcmp(lex, "return") == 0)
+        return 1;
+    if (strcmp(lex, "record") == 0)
+        return 1;
+    if (strcmp(lex, "endrecord") == 0)
+        return 1;
+    if (strcmp(lex, "else") == 0)
+        return 1;
     return 0;
 }
-
 
 terminals getKeywordToken(const char *lex)
 {
@@ -486,23 +523,54 @@ terminals getKeywordToken(const char *lex)
         return TK_TYPE;
     if (strcmp(lex, "_main") == 0)
         return TK_MAIN;
-   
-    return TK_ID; 
+    if (strcmp(lex, "endunion") == 0)
+        return TK_ENDUNION;
+    if (strcmp(lex, "global") == 0)
+        return TK_GLOBAL;
+    if (strcmp(lex, "if") == 0)
+        return TK_IF;
+    if (strcmp(lex, "list") == 0)
+        return TK_LIST;
+    if (strcmp(lex, "then") == 0)
+        return TK_THEN;
+    if (strcmp(lex, "endif") == 0)
+        return TK_ENDIF;
+    if (strcmp(lex, "read") == 0)
+        return TK_READ;
+    if (strcmp(lex, "write") == 0)
+        return TK_WRITE;
+    if (strcmp(lex, "return") == 0)
+        return TK_RETURN;
+    if (strcmp(lex, "record") == 0)
+        return TK_RECORD;
+    if (strcmp(lex, "endrecord") == 0)
+        return TK_ENDRECORD;
+    if (strcmp(lex, "else") == 0)
+        return TK_ELSE;
+    if (strcmp(lex, "call") == 0)
+        return TK_CALL;
+
+    return TK_ID;
 }
-void incrementForward(TwinBuffer *B) {
-    forward++; 
-  
-    if (activeBuffer == 1) {
-        if (forward >= twinBuffer.buffer1 + BUFFER_SIZE) {
+void incrementForward(TwinBuffer *B)
+{
+    forward++;
+
+    if (activeBuffer == 1)
+    {
+        if (forward >= twinBuffer.buffer1 + BUFFER_SIZE)
+        {
             getStream(srcFile);
         }
-    } else {
-        if (forward >= twinBuffer.buffer2 + BUFFER_SIZE) {
+    }
+    else
+    {
+        if (forward >= twinBuffer.buffer2 + BUFFER_SIZE)
+        {
             getStream(srcFile);
         }
     }
 }
-
 
 void retractForward(TwinBuffer *B)
 {
@@ -517,672 +585,486 @@ void flush(char *str)
         str[0] = '\0';
 }
 
-tokenInfo getNextToken(TwinBuffer *B)
-{
+
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include "lexerDef.h"  
+
+typedef enum {
+    STATE_ERROR      = -1,
+    STATE_INITIAL    = 0,
+    STATE_PERCENT,      
+    STATE_RSQ,          
+    STATE_LSQ,          
+    STATE_COMMA,        
+    STATE_SEMICOLON,    
+    STATE_COLON,        
+    STATE_DOT,          
+    STATE_OPAREN,       
+    STATE_CPAREN,       
+    STATE_PLUS,         
+    STATE_MINUS,        
+    STATE_MUL,          
+    STATE_DIV,          
+    STATE_NOT,          
+    STATE_EXCLAMATION,  
+    STATE_EXCL_EQ,      
+    STATE_AND_START,    
+    STATE_AND_MIDDLE,   
+    STATE_AND,          
+    STATE_AT_START,
+    STATE_AT_MIDDLE,
+    STATE_AT,
+    STATE_WHITESPACE,
+    STATE_GT,
+    STATE_GE,
+    STATE_LT,
+    STATE_LE,
+    STATE_ASSIGNOP,
+    STATE_NUM,          
+    STATE_AFTER_DOT,    
+    STATE_RNUM,         
+    STATE_ID_START,     
+    STATE_FINAL         
+} State;
+
+tokenInfo getNextToken(TwinBuffer *B) {
     tokenInfo t;
     t.lexeme[0] = '\0';
-    t.lineNumber = lineCount;
-
+    t.lineNumber = lineCount;  
 
     char lexeme[100];
     memset(lexeme, '\0', sizeof(lexeme));
     int counter = 0;
     char c = '\0';
-    terminals l;    
-    short state = 0;
+    State state = STATE_INITIAL;
 
-    while (1)
-    {
-        switch (state)
-        {
-        case -1:
-            fprintf(stderr, "DFA error at line %d. Current lexeme: \"%s\", failing character: '%c'\n",
-                    lineCount, lexeme, c);
-            exit(1);
-            break;
-            case 0:
-            {
+    while (1) {
+        switch (state) {
+
+            case STATE_ERROR: {
+                fprintf(stderr, "DFA error at line %d. Current lexeme: \"%s\", failing character: '%c'\n",
+                        lineCount, lexeme, c);
+                createToken(&t, TK_ERROR, lineCount, lexeme);
+                setBeginToForward(B);
+                incrementForward(B);
+                return t;
+            }
+
+            case STATE_INITIAL: {
                 c = *forward;
                 lexeme[counter++] = c;
-                
                 if (c == '%') {
-                    state = 1;
+                    state = STATE_PERCENT;
                     incrementForward(B);
-                } 
+                }
                 else if (c == ']') {
-                    state = 2;
+                    state = STATE_RSQ;
                     incrementForward(B);
                 }
                 else if (c == '[') {
-                    state = 3;
+                    state = STATE_LSQ;
                     incrementForward(B);
                 }
                 else if (c == ',') {
-                    state = 4;
+                    state = STATE_COMMA;
                     incrementForward(B);
                 }
                 else if (c == ';') {
-                    state = 5;
+                    state = STATE_SEMICOLON;
                     incrementForward(B);
                 }
                 else if (c == ':') {
-                    state = 6;
+                    state = STATE_COLON;
                     incrementForward(B);
                 }
                 else if (c == '.') {
-                    state = 7;
+                    state = STATE_DOT;
                     incrementForward(B);
                 }
                 else if (c == '(') {
-                    state = 8;
+                    state = STATE_OPAREN;
                     incrementForward(B);
                 }
                 else if (c == ')') {
-                    state = 9;
+                    state = STATE_CPAREN;
                     incrementForward(B);
                 }
                 else if (c == '+') {
-                    state = 10;
+                    state = STATE_PLUS;
                     incrementForward(B);
                 }
                 else if (c == '-') {
-                    state = 11;
+                    state = STATE_MINUS;
                     incrementForward(B);
                 }
                 else if (c == '*') {
-                    state = 12;
+                    state = STATE_MUL;
                     incrementForward(B);
                 }
                 else if (c == '/') {
-                    state = 13;
+                    state = STATE_DIV;
                     incrementForward(B);
                 }
                 else if (c == '~') {
-                    state = 14;
+                    state = STATE_NOT;
                     incrementForward(B);
                 }
                 else if (c == '!') {
-                    state = 15;
+                    state = STATE_EXCLAMATION;
                     incrementForward(B);
                 }
                 else if (c == '&') {
-                    state = 17;
+                    state = STATE_AND_START;
                     incrementForward(B);
                 }
                 else if (c == '@') {
-                    state = 20;
+                    state = STATE_AT_START;
                     incrementForward(B);
                 }
                 else if (c == ' ' || c == '\t' || c == '\n' || c == '\0' || c == EOF) {
-                    state = 23;
-
+                    state = STATE_WHITESPACE;
                 }
                 else if (c == '>') {
-                    state = 24;
+                    state = STATE_GT;
                     incrementForward(B);
                 }
                 else if (c == '<') {
-                    state = 27;
-                    incrementForward(B);
-                }
-                else if (c == '#') {
-                    state = 33;
+                    state = STATE_LT;
                     incrementForward(B);
                 }
                 else if (c == '=') {
-                    state = 36;
+                    state = STATE_ASSIGNOP;
                     incrementForward(B);
                 }
                 else if (isdigit(c)) {
-                    state = 38;
-
+                    state = STATE_NUM;
                 }
-                else if (c == 'b' || c == 'c' || c == 'd') {
-                    state = 48;
-                   
-                }
-                else if (islower(c)) {
-                    state = 54;
+                else if (islower(c) || c == '_') {
+                    state = STATE_ID_START;
                     incrementForward(B);
-                }
-                else if (c == '_') {
-                   
-                    lexeme[counter++] = c;
-                    incrementForward(B);
-                    state = 56;
                 }
                 else {
-                    state = -1;
+                    state = STATE_ERROR;
                     incrementForward(B);
                 }
                 break;
             }
-                
 
-        case 1:
-            // TK_COMMENT: skip the rest of the line
-            createToken(&t, TK_COMMENT, lineCount, lexeme);
-            ignoreComment(B);
-            setBeginToForward(B);
-            return t;
+            case STATE_PERCENT: {
 
-        case 2:
-            createToken(&t, TK_SQR, lineCount, lexeme);
-            setBeginToForward(B);
-            return t;
+                createToken(&t, TK_COMMENT, lineCount, lexeme);
+                ignoreComment(B);
+                setBeginToForward(B);
+                return t;
+            }
 
-        case 3:
-            createToken(&t, TK_SQL, lineCount, lexeme);
-            setBeginToForward(B);
-            return t;
+            case STATE_RSQ: {
+                createToken(&t, TK_SQR, lineCount, lexeme);
+                setBeginToForward(B);
+                return t;
+            }
 
-        case 4:
-            createToken(&t, TK_COMMA, lineCount, lexeme);
-            setBeginToForward(B);
-            return t;
+            case STATE_LSQ: {
+                createToken(&t, TK_SQL, lineCount, lexeme);
+                setBeginToForward(B);
+                return t;
+            }
 
-        case 5:
-            createToken(&t, TK_SEM, lineCount, lexeme);
-            setBeginToForward(B);
-            return t;
+            case STATE_COMMA: {
+                createToken(&t, TK_COMMA, lineCount, lexeme);
+                setBeginToForward(B);
+                return t;
+            }
 
-        case 6:
-            createToken(&t, TK_COLON, lineCount, lexeme);
-            setBeginToForward(B);
-            return t;
+            case STATE_SEMICOLON: {
+                createToken(&t, TK_SEM, lineCount, lexeme);
+                setBeginToForward(B);
+                return t;
+            }
 
-        case 7:
-            createToken(&t, TK_DOT, lineCount, lexeme);
-            setBeginToForward(B);
-            return t;
+            case STATE_COLON: {
+                createToken(&t, TK_COLON, lineCount, lexeme);
+                setBeginToForward(B);
+                return t;
+            }
 
-        case 8:
-            createToken(&t, TK_OP, lineCount, lexeme);
-            setBeginToForward(B);
-            return t;
+            case STATE_DOT: {
+                createToken(&t, TK_DOT, lineCount, lexeme);
+                setBeginToForward(B);
+                return t;
+            }
 
-        case 9:
-            createToken(&t, TK_CL, lineCount, lexeme);
-            setBeginToForward(B);
-            return t;
+            case STATE_OPAREN: {
+                createToken(&t, TK_OP, lineCount, lexeme);
+                setBeginToForward(B);
+                return t;
+            }
 
-        case 10:
-            createToken(&t, TK_PLUS, lineCount, lexeme);
-            setBeginToForward(B);
-            return t;
+            case STATE_CPAREN: {
+                createToken(&t, TK_CL, lineCount, lexeme);
+                setBeginToForward(B);
+                return t;
+            }
 
-        case 11:
-            createToken(&t, TK_MINUS, lineCount, lexeme);
-            setBeginToForward(B);
-            return t;
+            case STATE_PLUS: {
+                createToken(&t, TK_PLUS, lineCount, lexeme);
+                setBeginToForward(B);
+                return t;
+            }
 
-        case 12:
-            createToken(&t, TK_MUL, lineCount, lexeme);
-            setBeginToForward(B);
-            return t;
+            case STATE_MINUS: {
+                createToken(&t, TK_MINUS, lineCount, lexeme);
+                setBeginToForward(B);
+                return t;
+            }
 
-        case 13:
-            createToken(&t, TK_DIV, lineCount, lexeme);
-            setBeginToForward(B);
-            return t;
+            case STATE_MUL: {
+                createToken(&t, TK_MUL, lineCount, lexeme);
+                setBeginToForward(B);
+                return t;
+            }
 
-        case 14:
-            createToken(&t, TK_NOT, lineCount, lexeme);
-            setBeginToForward(B);
-            return t;
+            case STATE_DIV: {
+                createToken(&t, TK_DIV, lineCount, lexeme);
+                setBeginToForward(B);
+                return t;
+            }
 
-        case 15:
-            c = *forward;
-            if (c == '=')
-            {
-                lexeme[counter++] = c;
+            case STATE_NOT: {
+                createToken(&t, TK_NOT, lineCount, lexeme);
+                setBeginToForward(B);
+                return t;
+            }
+
+            case STATE_EXCLAMATION: {
+                c = *forward;
+                if (c == '=') {
+                    lexeme[counter++] = c;
+                    state = STATE_EXCL_EQ;
+                    incrementForward(B);
+                }
+                else {
+                    state = STATE_ERROR;
+                }
+                break;
+            }
+
+            case STATE_EXCL_EQ: {
                 createToken(&t, TK_NE, lineCount, lexeme);
                 setBeginToForward(B);
+                return t;
             }
-            else
-            {
-                state = -1;
-            }
-            return t;
 
-        case 17:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (c == '&')
-                state = 18;
-            else
-                state = -1;
-            incrementForward(B);
-            break;
-
-        case 18:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (c == '&')
-                state = 19;
-            else
-                state = -1;
-            incrementForward(B);
-            break;
-
-        case 19:
-            createToken(&t, TK_AND, lineCount, lexeme);
-            setBeginToForward(B);
-            return t;
-
-        case 20:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (c == '@')
-                state = 21;
-            else
-                state = -1;
-            incrementForward(B);
-            break;
-
-        case 21:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (c == '@')
-                state = 22;
-            else
-                state = -1;
-            incrementForward(B);
-            break;
-            case 23:
-
-            while (*forward == ' ' || *forward == '\t' || *forward == '\n') {
-                printf("State 23: Skipping whitespace, current char: '%c'\n", *forward);
-                if (*forward == '\n') {
-                    lineCount++;
+            case STATE_AND_START: {
+                c = *forward;
+                lexeme[counter++] = c;
+                if (c == '&') {
+                    state = STATE_AND_MIDDLE;
+                }
+                else {
+                    state = STATE_ERROR;
                 }
                 incrementForward(B);
+                break;
             }
 
-            printf("State 23: Finished skipping, current char: '%c' (line %d)\n", *forward, lineCount);
-            
+            case STATE_AND_MIDDLE: {
+                c = *forward;
+                lexeme[counter++] = c;
+                if (c == '&')
+                    state = STATE_AND;
+                else
+                    state = STATE_ERROR;
+                incrementForward(B);
+                break;
+            }
 
-            if (*forward == '\0' || *forward == EOF) {
-                createToken(&t, END_OF_INPUT, lineCount, lexeme);
+            case STATE_AND: {
+                createToken(&t, TK_AND, lineCount, lexeme);
+                setBeginToForward(B);
+                return t;
+            }
+
+            case STATE_AT_START: {
+                c = *forward;
+                lexeme[counter++] = c;
+                if (c == '@') {
+                    state = STATE_AT_MIDDLE;
+                }
+                else {
+                    state = STATE_ERROR;
+                }
+                incrementForward(B);
+                break;
+            }
+
+            case STATE_AT_MIDDLE: {
+                c = *forward;
+                lexeme[counter++] = c;
+                if (c == '@')
+                    state = STATE_AT;
+                else
+                    state = STATE_ERROR;
+                incrementForward(B);
+                break;
+            }
+
+            case STATE_AT: {
+
+                createToken(&t, TK_AT, lineCount, lexeme);
+                setBeginToForward(B);
+                return t;
+            }
+
+            case STATE_WHITESPACE: {
+                while (*forward == ' ' || *forward == '\t' || *forward == '\n') {
+                    if (*forward == '\n')
+                        lineCount++;
+                    incrementForward(B);
+                }
+                if (*forward == '\0' || *forward == EOF) {
+                    createToken(&t, END_OF_INPUT, lineCount, lexeme);
+                    return t;
+                }
+                memset(lexeme, 0, sizeof(lexeme));
+                counter = 0;
+                setBeginToForward(B);
+                state = STATE_INITIAL;
+                break;
+            }
+
+            case STATE_GT: {
+                c = *forward;
+                lexeme[counter++] = c;
+                if (c == '=') {
+                    state = STATE_GE;
+                    incrementForward(B);
+                }
+                else {
+                    state = STATE_FINAL;
+                break;
+            }
+
+            case STATE_GE: {
+                createToken(&t, TK_GE, lineCount, lexeme);
+                setBeginToForward(B);
+                return t;
+            }
+
+            case STATE_FINAL: {
+
+                lexeme[counter - 1] = '\0';
+
+                createToken(&t, TK_GT, lineCount, lexeme);
+                retractForward(B);
+                setBeginToForward(B);
+                return t;
+            }
+
+            case STATE_LT: {
+                c = *forward;
+                if (c == '=') {
+                    lexeme[counter++] = c;
+                    incrementForward(B);
+                    lexeme[counter] = '\0';
+                    createToken(&t, TK_LE, lineCount, lexeme);
+                } else {
+
+                    lexeme[counter] = '\0';
+                    createToken(&t, TK_LT, lineCount, lexeme);
+                }
+                setBeginToForward(B);
                 return t;
             }
             
 
-            memset(lexeme, 0, sizeof(lexeme));
-            counter = 0;
-            setBeginToForward(B);
-            state = 0;
-            break;
-        
+            case STATE_LE: {
+                createToken(&t, TK_LE, lineCount, lexeme);
+                setBeginToForward(B);
+                return t;
+            }
 
-        
-        
+            case STATE_ASSIGNOP: {
+                c = *forward;
+                lexeme[counter++] = c;
+                if (c == '=') {
+                    createToken(&t, TK_EQ, lineCount, lexeme);
+                    setBeginToForward(B);
+                    return t;
+                }
+                else {
+                    state = STATE_ERROR;
+                }
+                break;
+            }
 
-        case 24:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (c == '=')
-                state = 25;
-            else
-                state = 26;
-            incrementForward(B);
-            break;
+            case STATE_NUM: {
 
-        case 25:
-            createToken(&t, TK_GE, lineCount, lexeme);
-            setBeginToForward(B);
-            return t;
+                char next = *forward;
+                if (isdigit(next)) {
+                    lexeme[counter++] = next;
+                    incrementForward(B);
+                    state = STATE_NUM;
+                }
+                else if (next == '.') {
+                    lexeme[counter++] = next;
+                    incrementForward(B);
+                    state = STATE_AFTER_DOT;
+                }
+                else {
+                    createToken(&t, TK_NUM, lineCount, lexeme);
+                    setBeginToForward(B);
+                    return t;
+                }
+                break;
+            }
 
-        case 26:
-            lexeme[counter - 1] = '\0';
-            createToken(&t, TK_GT, lineCount, lexeme);
-            retractForward(B);
-            setBeginToForward(B);
-            return t;
+            case STATE_AFTER_DOT: {
+                c = *forward;
+                lexeme[counter++] = c;
+                if (isdigit(c))
+                    state = STATE_RNUM;
+                else
+                    state = STATE_ERROR;
+                incrementForward(B);
+                break;
+            }
 
-            case 27:
-            c = *forward;
-            lexeme[counter++] = c;
-            printf("State 27: read '%c', lexeme so far: \"%s\"\n", c, lexeme);
-            if (c == '=')
-                state = 28;
-            else if (c == '-')
-                state = 29;
-            else
-                state = 32;
-            incrementForward(B);
-            break;
-        
+            case STATE_RNUM: {
+                c = *forward;
+                lexeme[counter++] = c;
+                if (isdigit(c))
+                    state = STATE_RNUM;
+                else {
+                    createToken(&t, TK_RNUM, lineCount, lexeme);
+                    setBeginToForward(B);
+                    return t;
+                }
+                incrementForward(B);
+                break;
+            }
 
-            case 28:
+            case STATE_ID_START: {
+                // Read an identifier (or keyword) starting with a lowercase letter or underscore.
+                while (isalnum(*forward) || *forward == '_') {
+                    lexeme[counter++] = *forward;
+                    incrementForward(B);
+                }
+                lexeme[counter] = '\0';
+                if (isKeyword(lexeme))
+                    createToken(&t, getKeywordToken(lexeme), lineCount, lexeme);
+                else
+                    createToken(&t, TK_FIELDID, lineCount, lexeme);
+                setBeginToForward(B);
+                return t;
+            }
 
-            lexeme[counter] = '\0';
-            printf("State 28: Final lexeme before token creation: \"%s\"\n", lexeme);
-            createToken(&t, TK_LE, lineCount, lexeme);
-            setBeginToForward(B);
-            return t;
-        
-
-        case 29:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (c == '-')
-                state = 30;
-            else
-                state = 61;
-            incrementForward(B);
-            break;
-
-        case 30:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (c == '-')
-                state = 31;
-            else
-                state = -1;
-            incrementForward(B);
-            break;
-
-        case 31:
-            createToken(&t, TK_ASSIGNOP, lineCount, lexeme);
-            setBeginToForward(B);
-            return t;
-
-        case 61:
-            lexeme[counter - 1] = '\0';
-            lexeme[counter - 2] = '\0';
-            createToken(&t, TK_LT, lineCount, lexeme);
-            retractForward(B);
-            retractForward(B);
-            setBeginToForward(B);
-            return t;
-
-        case 32:
-            createToken(&t, TK_LT, lineCount, lexeme);
-            retractForward(B);
-            setBeginToForward(B);
-            return t;
-
-        case 33:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (islower(c))
-                state = 34;
-            else
-                state = -1;
-            incrementForward(B);
-            break;
-
-        case 34:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (isalpha(c))
-                state = 34;
-            else
-                state = 35;
-            incrementForward(B);
-            break;
-
-        case 35:
-            lexeme[counter - 1] = '\0';
-
-            if (isKeyword(lexeme))
-                createToken(&t, getKeywordToken(lexeme), lineCount, lexeme);
-            else
-                createToken(&t, TK_RUID, lineCount, lexeme);
-            retractForward(B);
-            setBeginToForward(B);
-            return t;
-
-        case 36:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (c == '=')
-                state = 37;
-            else
-                state = -1;
-            incrementForward(B);
-            break;
-
-        case 37:
-            createToken(&t, TK_EQ, lineCount, lexeme);
-            setBeginToForward(B);
-            return t;
-
-        case 38:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (isdigit(c))
-                state = 38;
-            else if (c == '.')
-                state = 39;
-            else
-                state = 41;
-            incrementForward(B);
-            break;
-
-        case 39:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (isdigit(c))
-                state = 40;
-            else
-                state = 60;
-            incrementForward(B);
-            break;
-
-        case 60:
-            lexeme[counter - 1] = '\0';
-            lexeme[counter - 2] = '\0';
-            createToken(&t, TK_NUM, lineCount, lexeme);
-            retractForward(B);
-            retractForward(B);
-            setBeginToForward(B);
-            return t;
-
-        case 40:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (isdigit(c))
-                state = 42;
-            else
-                state = -1;
-            incrementForward(B);
-            break;
-
-        case 41:
-            lexeme[counter - 1] = '\0';
-            createToken(&t, TK_NUM, lineCount, lexeme);
-            retractForward(B);
-            setBeginToForward(B);
-            return t;
-
-        case 42:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (c == 'E')
-                state = 43;
-            else
-                state = 47;
-            incrementForward(B);
-            break;
-
-        case 43:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (c == '+' || c == '-')
-                state = 44;
-            else if (isdigit(c))
-                state = 45;
-            else
-                state = -1;
-            incrementForward(B);
-            break;
-
-        case 44:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (isdigit(c))
-                state = 45;
-            else
-                state = -1;
-            incrementForward(B);
-            break;
-
-        case 45:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (isdigit(c))
-                state = 46;
-            else
-                state = -1;
-            incrementForward(B);
-            break;
-
-        case 46:
-            createToken(&t, TK_RNUM, lineCount, lexeme);
-            setBeginToForward(B);
-            return t;
-
-        case 47:
-            lexeme[counter - 1] = '\0';
-            createToken(&t, TK_RNUM, lineCount, lexeme);
-            retractForward(B);
-            setBeginToForward(B);
-            return t;
-
-        case 48:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (islower(c))
-                state = 49;
-            else if (isdigit(c) && c != '0' && c != '1' && c != '8' && c != '9')
-                state = 51;
-            else
-                state = 50;
-            incrementForward(B);
-            break;
-
-        case 49:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (islower(c))
-                state = 49;
-            else
-                state = 50;
-            incrementForward(B);
-            break;
-
-        case 50:
-            lexeme[counter - 1] = '\0';
-            if (isKeyword(lexeme))
-                createToken(&t, getKeywordToken(lexeme), lineCount, lexeme);
-            else
-                createToken(&t, TK_FIELDID, lineCount, lexeme);
-            retractForward(B);
-            setBeginToForward(B);
-            return t;
-
-        case 51:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (c == 'b' || c == 'c' || c == 'd')
-                state = 51;
-            else if (isdigit(c) && c != '0' && c != '1' && c != '8' && c != '9')
-                state = 53;
-            else
-                state = 52;
-            incrementForward(B);
-            break;
-
-        case 52:
-            lexeme[counter - 1] = '\0';
-            createToken(&t, TK_ID, lineCount, lexeme);
-            retractForward(B);
-            setBeginToForward(B);
-            return t;
-
-        case 53:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (isdigit(c) && c != '0' && c != '1' && c != '8' && c != '9')
-                state = 53;
-            else
-                state = 52;
-            incrementForward(B);
-            break;
-
-        case 54:
-            c = *forward;
-            lexeme[counter++] = c;
-            if (islower(c))
-                state = 54;
-            else
-                state = 55;
-            incrementForward(B);
-            break;
-
-        case 55:
-            retractForward(B);
-            lexeme[counter - 1] = '\0';
-            setBeginToForward(B);
-            if (isKeyword(lexeme))
-                createToken(&t, getKeywordToken(lexeme), lineCount, lexeme);
-            else
-                createToken(&t, TK_FIELDID, lineCount, lexeme);
-            return t;
-
-
-       case 56:
-       c = *forward;
-       printf("State 56: after '_' read: '%c'\n", c);
-       if (isalpha(c)) {
-            lexeme[counter++] = c;
-            state = 57;
-            incrementForward(B);
-       } else {
-            state = -1;
-       }
-       break;
-   
-   case 57:
-       c = *forward;
-       printf("State 57: reading identifier, current char: '%c'\n", c);
-       if (c == '\0' || c == EOF) {
-            state = 59;
-       } else {
-            lexeme[counter++] = c;
-            if (isalpha(c))
-                state = 57;
-            else if (isdigit(c))
-                state = 58;
-            else
-                state = 59;
-            incrementForward(B);
-       }
-       break;
-   
-   case 58:
-       c = *forward;
-       printf("State 58: reading digits in identifier, current char: '%c'\n", c);
-       if (c == '\0' || c == EOF) {
-            state = 59;
-       } else {
-            lexeme[counter++] = c;
-            if (isdigit(c))
-                state = 58;
-            else
-                state = 59;
-            incrementForward(B);
-       }
-       break;
-   
-
-case 59:
-lexeme[counter] = '\0'; 
-createToken(&t, TK_FUNID, lineCount, lexeme);
-setBeginToForward(B);    
-return t;
-        } 
+            default: {
+                state = STATE_ERROR;
+                break;
+            }
+        }
     }
 }
