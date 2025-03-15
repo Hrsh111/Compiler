@@ -73,3 +73,4 @@ void freeStack(Stack *stack) {
     }
     free(stack);
 }
+

@@ -3,7 +3,66 @@
 
 #include "parserDef.h"
 #define NUM_TERMINALS (sizeof(tokenStrings)/sizeof(tokenStrings[0]))
-#define NUM_NONTERMINALS (sizeof(nonTerminals)/sizeof(nonTerminals[0]))
+
+
+typedef enum {
+    NT_PROGRAM,
+    NT_MAINFUNCTION,
+    NT_OTHERFUNCTIONS,
+    NT_FUNCTION,
+    NT_INPUT_PAR,
+    NT_OUTPUT_PAR,
+    NT_OPT_INPUT_PAR,
+    NT_ITERATIVE_STMT,
+    NT_PARAMETER_LIST,
+    NT_DATA_TYPE,
+    NT_PRIMITIVE_DATATYPE,
+    NT_CONSTRUCTED_DATATYPE,
+    NT_A,
+    NT_STMTS,
+    NT_REMAINING_LIST,
+    NT_TYPE_DEFINITIONS,
+    NT_ACTUAL_OR_REDEFINED,
+    NT_TYPE_DEFINITION,
+    NT_FIELD_DEFINITIONS,
+    NT_FIELD_DEFINITION,
+    NT_FIELD_TYPE,
+    NT_MORE_FIELDS,
+    NT_DECLARATIONS,
+    NT_DECLARATION,
+    NT_GLOBAL_OR_NOT,
+    NT_OTHERSTMTS,
+    NT_STMT,
+    NT_ASSIGNMENT_STMT,
+    NT_SINGLE_OR_REC_ID,
+    NT_OPTION_SINGLE_CONSTRUCTED,
+    NT_ONE_EXPANSION,
+    NT_MORE_EXPANSIONS,
+    NT_FUN_CALL_STMT,
+    NT_OUTPUT_PARAMETERS,
+    NT_INPUT_PARAMETERS,
+    NT_CONDITIONAL_STMT,
+    NT_ELSE_PART,
+    NT_IO_STMT,
+    NT_ARITHMETIC_EXPRESSION,
+    NT_EXP_PRIME,
+    NT_TERM,
+    NT_TERM_PRIME,
+    NT_FACTOR,
+    NT_HIGH_PRECEDENCE_OPERATORS,
+    NT_LOW_PRECEDENCE_OPERATORS,
+    NT_BOOLEAN_EXPRESSION,
+    NT_VAR,
+    NT_LOGICAL_OP,
+    NT_RELATIONAL_OP,
+    NT_RETURN_STMT,
+    NT_OPTIONAL_RETURN,
+    NT_ID_LIST,
+    NT_MORE_IDS,
+    NT_DEFINETYPE_STMT,
+    TOTAL_NON_TERMINALS // ✅ Always at the end
+} NonTerminal;
+
 
 // Global grammar rule array and count (defined in parser.c)
 extern GrammarRule grammarRules[];
@@ -14,11 +73,11 @@ extern int numGrammarRules;
 FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals);
 
 // Creates the predictive parse table from the FIRST/FOLLOW sets.
-void createParseTable(FirstFollow *ffArr, int numNonTerminals, int table[][NUM_TERMINALS]);
+void createParseTable(FirstFollow *ffArr, int numNonTerminals, int table[TOTAL_NON_TERMINALS][NUM_TERMINALS]);
 
 // Parses the input source code (given by testcaseFile) using the predictive parse table.
 // Returns the root of the constructed parse tree.
-ParseTreeNode* parseInputSourceCode(char *testcaseFile, int parseTable[][NUM_TERMINALS]);
+ParseTreeNode* parseInputSourceCode(char *testcaseFile, int parseTable[TOTAL_NON_TERMINALS][NUM_TERMINALS]);
 
 // Prints the parse tree in inorder to the given output file.
 void printParseTree(ParseTree *PT, char *outfile);
@@ -30,6 +89,8 @@ int isNonTerminal(const char *symbol);
 // Returns the index of a given non-terminal in the nonTerminals array.
 int getNonTerminalIndex(const char *nonTerminal);
 int containsSymbol(char **arr, int count, const char *symbol);
+void freeParseTree(ParseTreeNode *root);
+
 
 
 #endif // PARSER_H

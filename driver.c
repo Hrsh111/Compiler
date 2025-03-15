@@ -6,7 +6,8 @@
 #include "parserDef.h"   // Contains Grammar, GrammarRule, ParseTree, ParseTreeNode, etc.
 #include "stack.h"       // Contains stack functions used by the parser
 #include "parser.h"
-#include "lexer.h"
+#include<string.h>
+
 // Extern declarations (adjust as per your project structure)
 extern TwinBuffer twinBuffer;
 extern GrammarRule grammarRules[];
@@ -15,10 +16,6 @@ extern int getNonTerminalIndex(const char *nonTerminal);
 extern int getTerminalIndex(const char *terminal);
 extern int isTerminal(const char *symbol);
 
-
-
-
-// Main driver integrating both lexer and parser.
 int main(int argc, char *argv[]) {
     if (argc < 3) {
         fprintf(stderr, "Usage: %s <input source file> <output parse tree file>\n", argv[0]);
@@ -65,7 +62,7 @@ int main(int argc, char *argv[]) {
     printf("\n========== Running Parser ==========\n");
     
     // Reinitialize the lexer so that parsing starts fresh.
-    // This assumes init_lexer() resets necessary global state.
+    // Note: This function should reset twinBuffer and any other global state.
     init_lexer(inputFile);
     
     // Set up the grammar.
@@ -75,14 +72,26 @@ int main(int argc, char *argv[]) {
     G.startSymbol = "program";
     
     // Compute FIRST and FOLLOW sets for the grammar.
-    FirstFollow *ffArr = ComputeFirstAndFollowSets(&G, NUM_NONTERMINALS);
+    FirstFollow *ffArr = ComputeFirstAndFollowSets(&G, TOTAL_NON_TERMINALS);
+    if (ffArr == NULL) {
+        fprintf(stderr, "Error computing FIRST and FOLLOW sets.\n");
+        return EXIT_FAILURE;
+    }
     
     // Create the predictive parse table.
-    int parseTable[NUM_NONTERMINALS][NUM_TERMINALS];
-    createParseTable(ffArr, NUM_NONTERMINALS, parseTable);
+    int parseTable[TOTAL_NON_TERMINALS][NUM_TERMINALS];
+
+    memset(parseTable, -1, sizeof(parseTable));  // Initialize to -1
+createParseTable(ffArr, TOTAL_NON_TERMINALS, parseTable);
+
+    
+    // Debug: Optionally print a message indicating parse table creation is complete.
+    printf("Parse table created successfully.\n");
     
     // Start the parser and measure time.
     clock_t startParser = clock();
+    // If your parser expects the input filename (and internally calls init_lexer or similar),
+    // pass inputFile. If it expects a file pointer, adjust accordingly.
     ParseTreeNode *parseTreeRoot = parseInputSourceCode(inputFile, parseTable);
     clock_t endParser = clock();
     double elapsedParser = (double)(endParser - startParser) / CLOCKS_PER_SEC;
@@ -101,7 +110,8 @@ int main(int argc, char *argv[]) {
     printParseTree(&PT, outputFile);
     printf("Parse tree written to %s\n", outputFile);
     
-    // Clean up (free allocated memory) if applicable.
+    // Free any allocated memory if applicable.
+    // For example, free(ffArr) if ComputeFirstAndFollowSets() dynamically allocated it.
     
     return EXIT_SUCCESS;
 }

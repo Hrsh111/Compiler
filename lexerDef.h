@@ -35,16 +35,16 @@ static const char* tokenStrings[] = {
 
 static const char* nonTerminals[] = {
     "program", "mainFunction", "otherFunctions", "function", "input_par", "output_par",
-    "parameter_list", "dataType", "primitiveDatatype", "constructedDatatype", "A",
-    "stmts", "remaining_list", "typeDefinitions", "typeDefinition", "fieldDefinitions",
-    "fieldDefinition", "fieldtype", "moreFields", "declarations", "declaration",
-    "global_or_not", "otherStmts", "stmt", "assignmentStmt", "singleOrRecId",
-    "option_single_constructed", "oneExpansion", "moreExpansions", "funCallStmt",
-    "outputParameters", "inputParameters", "iterativeStmt", "conditionalStmt",
-    "elsePart", "ioStmt", "arithmeticExpression", "expPrime", "term", "termPrime",
-    "factor", "highPrecedenceOperators", "lowPrecedenceOperators", "booleanExpression",
-    "var", "logicalOp", "relationalOp", "returnStmt", "optionalReturn", "idList",
-    "more_ids", "definetypestmt", 
+    "opt_input_par", "iterativeStmt", "parameter_list", "dataType", "primitiveDatatype", 
+    "constructedDatatype", "A", "stmts", "remaining_list", "typeDefinitions", 
+    "actualOrRedefined", "typeDefinition", "fieldDefinitions", "fieldDefinition", 
+    "fieldType", "moreFields", "declarations", "declaration", "global_or_not", 
+    "otherStmts", "stmt", "assignmentStmt", "singleOrRecId", "option_single_constructed", 
+    "oneExpansion", "moreExpansions", "funCallStmt", "outputParameters", "inputParameters", 
+    "conditionalStmt", "elsePart", "ioStmt", "arithmeticExpression", "expPrime", "term", 
+    "termPrime", "factor", "highPrecedenceOperators", "lowPrecedenceOperators", 
+    "booleanExpression", "var", "logicalOp", "relationalOp", "returnStmt", 
+    "optionalReturn", "idList", "more_ids", "definetypestmt"
 };
 
 

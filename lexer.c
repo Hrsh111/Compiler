@@ -9,7 +9,7 @@ int lineCount = 1;
 char *forward;
 char *lexemebegin;
 int activeBuffer;
-FILE *srcFile;
+FILE *srcFile=NULL;
 bool exhaustedInput;
 bool ldfirstBuff;
 bool ldsecondBuff;
@@ -18,36 +18,43 @@ TwinBuffer twinBuffer;
 Symboltable *table = NULL;
 keyword *kwEntries[KC] = {NULL};
 
-FILE *initialise(char *inputFile)
-{
-    srcFile = fopen(inputFile, "r");
-    if (srcFile == NULL)
-    {
-        printf("ERROR! File not opened.\n");
+FILE *initialise(char *inputFile) {
+    srcFile = fopen(inputFile, "r");  // Open file for reading
+    if (srcFile == NULL) {
+        printf("ERROR! Could not open file: %s\n", inputFile);
         return NULL;
     }
 
+    // Read into buffer
     int size = fread(twinBuffer.buffer1, sizeof(char), BUFFER_SIZE, srcFile);
-    if (size < BUFFER_SIZE)
-    {
-        twinBuffer.buffer1[size] = EOF;
-        exhaustedInput = true;
+    if (size == 0 && ferror(srcFile)) {
+        printf("ERROR: Failed to read from file: %s\n", inputFile);
+        fclose(srcFile);
+        return NULL;
     }
-    else
-    {
+
+    // Handle end-of-file scenarios
+    if (size < BUFFER_SIZE) {
+        if(size>=0)twinBuffer.buffer1[size] = EOF;  // Mark EOF in buffer
+        exhaustedInput = true;
+    } else {
         exhaustedInput = false;
     }
 
+    // Initialize twin buffer pointers
     activeBuffer = 1;
     ldfirstBuff = true;
     ldsecondBuff = false;
     lexemebegin = twinBuffer.buffer1;
     forward = twinBuffer.buffer1;
 
+    // Initialize Symbol Table (Ensure this function is correctly defined)
     initializeSymbolTable(&table);
 
+    printf("File %s opened and initialized successfully.\n", inputFile);
     return srcFile;
 }
+
 FILE *getStream(FILE *fp)
 {
     if (exhaustedInput)
@@ -114,7 +121,9 @@ void initializeKeywords()
         {"union", TK_UNION},
         {"while", TK_WHILE},
         {"with", TK_WITH},
-        {"write", TK_WRITE}};
+        {"write", TK_WRITE},
+        
+    };
     for (int i = 0; i < KC; i++)
     {
         kwEntries[i] = (keyword *)malloc(sizeof(keyword));
@@ -628,7 +637,8 @@ typedef enum {
     STATE_NUM,          
     STATE_AFTER_DOT,    
     STATE_RNUM,         
-    STATE_ID_START,     
+    STATE_ID_START, 
+    STATE_RUID,    
     STATE_FINAL         
 } State;
 
@@ -650,12 +660,18 @@ tokenInfo getNextToken(TwinBuffer *B) {
                 fprintf(stderr, "DFA error at line %d. Current lexeme: \"%s\", failing character: '%c'\n",
                         lineCount, lexeme, c);
                 createToken(&t, TK_ERROR, lineCount, lexeme);
-                setBeginToForward(B);
+                //setBeginToForward(B);
                 incrementForward(B);
                 return t;
             }
 
+
             case STATE_INITIAL: {
+                if (*forward == '#') {
+                    lexeme[counter++] = *forward;
+                    incrementForward(B);
+                    state = STATE_RUID;
+                } 
                 c = *forward;
                 lexeme[counter++] = c;
                 if (c == '%') {
@@ -751,6 +767,21 @@ tokenInfo getNextToken(TwinBuffer *B) {
                 else {
                     state = STATE_ERROR;
                     incrementForward(B);
+                }
+                break;
+            }
+            case STATE_RUID: {
+                c = *forward;
+            
+                // Accept only lowercase letters
+                if (islower(c)) {
+                    lexeme[counter++] = c;
+                    incrementForward(B);
+                } else {
+                    lexeme[counter] = '\0';  // Terminate lexeme string
+                    createToken(&t, TK_RUID, lineCount, lexeme);
+                    setBeginToForward(B);
+                    return t;
                 }
                 break;
             }
@@ -1060,10 +1091,11 @@ tokenInfo getNextToken(TwinBuffer *B) {
                 if (isKeyword(lexeme))
                     createToken(&t, getKeywordToken(lexeme), lineCount, lexeme);
                 else
-                    createToken(&t, TK_FIELDID, lineCount, lexeme);
+                    createToken(&t, TK_ID, lineCount, lexeme);
                 setBeginToForward(B);
                 return t;
             }
+            
 
             default: {
                 state = STATE_ERROR;
