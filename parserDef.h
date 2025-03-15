@@ -22,7 +22,8 @@ typedef struct GrammarRule {
 // Define structure for the grammar
 typedef struct Grammar {
     GrammarRule *rules;
-    int numRules;   // Number of rules in the grammar
+    int numRules;
+    char *startSymbol;   // Number of rules in the grammar
 } Grammar;
 
 // Define structure for a parse table entry
@@ -55,5 +56,17 @@ typedef struct ParseTreeNode {
 typedef struct ParseTree {
     ParseTreeNode *root;    // Root node of the parse tree
 } ParseTree;
+#define INIT_CAPACITY 8
+
+typedef struct FirstFollow {
+    char **first;       // Dynamic array of strings representing FIRST set
+    int firstCount;     // Current number of symbols in FIRST set
+    int firstCapacity;  // Current capacity of the FIRST array
+
+    char **follow;      // Dynamic array of strings representing FOLLOW set
+    int followCount;    // Current number of symbols in FOLLOW set
+    int followCapacity; // Current capacity of the FOLLOW array
+} FirstFollow;
+
 
 #endif // PARSERDEF_H
