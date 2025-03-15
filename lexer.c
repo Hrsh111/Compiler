@@ -1003,24 +1003,24 @@ tokenInfo getNextToken(TwinBuffer *B) {
             }
 
             case STATE_LT: {
-                // After reading '<' in state 0, now check the next character:
+
                 c = *forward;
                 if (c == '-') {
-                    // Found a '-', expect two more '-' for a complete "<---"
-                    lexeme[counter++] = c; // Append first '-'
+
+                    lexeme[counter++] = c; 
                     incrementForward(B);
                     if (*forward == '-') {
-                        lexeme[counter++] = *forward; // Append second '-'
+                        lexeme[counter++] = *forward; 
                         incrementForward(B);
                         if (*forward == '-') {
-                            lexeme[counter++] = *forward; // Append third '-'
+                            lexeme[counter++] = *forward; 
                             incrementForward(B);
                             lexeme[counter] = '\0';
                             createToken(&t, TK_ASSIGNOP, lineCount, lexeme);
                             setBeginToForward(B);
                             return t;
                         } else {
-                            // Not three '-' in a row
+
                             state = STATE_ERROR;
                         }
                     } else {
@@ -1028,7 +1028,7 @@ tokenInfo getNextToken(TwinBuffer *B) {
                     }
                 }
                 else if (c == '=') {
-                     // Handle "<=" operator:
+
                      lexeme[counter++] = c;
                      incrementForward(B);
                      lexeme[counter] = '\0';
@@ -1037,7 +1037,7 @@ tokenInfo getNextToken(TwinBuffer *B) {
                      return t;
                 }
                 else {
-                     // No '-' or '=' after '<', so it's just a TK_LT token:
+
                      lexeme[counter] = '\0';
                      createToken(&t, TK_LT, lineCount, lexeme);
                      setBeginToForward(B);
@@ -1066,10 +1066,10 @@ tokenInfo getNextToken(TwinBuffer *B) {
                 }
                 break;
             }
-// Numeric token processing
+
 
 case STATE_NUM: {
-    // Check for end-of-file or string termination before processing further
+
     if (*forward == '\0' || *forward == EOF) {
         createToken(&t, TK_NUM, lineCount, lexeme);
         setBeginToForward(B);
@@ -1079,15 +1079,15 @@ case STATE_NUM: {
     if (isdigit(next)) {
         lexeme[counter++] = next;
         incrementForward(B);
-        state = STATE_NUM;  // Remain in numeric state
+        state = STATE_NUM;  
     }
     else if (next == '.') {
         lexeme[counter++] = next;
         incrementForward(B);
-        state = STATE_AFTER_DOT;  // Transition to process fractional part
+        state = STATE_AFTER_DOT;
     }
     else {
-        // If a non-digit (and non-dot) is encountered, finalize the number token.
+        
         createToken(&t, TK_NUM, lineCount, lexeme);
         setBeginToForward(B);
         return t;
@@ -1097,7 +1097,7 @@ case STATE_NUM: {
 
 
 case STATE_REAL_FRACTION1: {
-    // Expect the first digit after the dot.
+    
     if (isdigit(*forward)) {
         lexeme[counter++] = *forward;
         incrementForward(B);
@@ -1109,7 +1109,7 @@ case STATE_REAL_FRACTION1: {
 }
 
 case STATE_REAL_FRACTION2: {
-    // Expect the second digit after the dot.
+    
     if (isdigit(*forward)) {
         lexeme[counter++] = *forward;
         incrementForward(B);
@@ -1121,13 +1121,13 @@ case STATE_REAL_FRACTION2: {
 }
 
 case STATE_EXPONENT_CHECK: {
-    // Check for exponent part ('E' or 'e').
+    
     if (*forward == 'E' || *forward == 'e') {
         lexeme[counter++] = *forward;
         incrementForward(B);
         state = STATE_EXP_SIGN;
     } else {
-        // No exponent: finalize the real number.
+    
         retractForward(B);
         createToken(&t, TK_RNUM, lineCount, lexeme);
         setBeginToForward(B);
@@ -1137,7 +1137,7 @@ case STATE_EXPONENT_CHECK: {
 }
 
 case STATE_EXP_SIGN: {
-    // Optional sign for the exponent.
+    
     if (*forward == '+' || *forward == '-') {
         lexeme[counter++] = *forward;
         incrementForward(B);
@@ -1147,7 +1147,7 @@ case STATE_EXP_SIGN: {
 }
 
 case STATE_EXP_DIGIT1: {
-    // Expect the first digit of the exponent.
+    
     if (isdigit(*forward)) {
         lexeme[counter++] = *forward;
         incrementForward(B);
@@ -1159,7 +1159,7 @@ case STATE_EXP_DIGIT1: {
 }
 
 case STATE_EXP_DIGIT2: {
-    // Expect the second digit of the exponent.
+    
     if (isdigit(*forward)) {
         lexeme[counter++] = *forward;
         incrementForward(B);
@@ -1171,7 +1171,7 @@ case STATE_EXP_DIGIT2: {
 }
 
 case STATE_FINAL_RNUM: {
-    // Finalize the real number token with exponent.
+    
     createToken(&t, TK_RNUM, lineCount, lexeme);
     setBeginToForward(B);
     return t;
@@ -1206,28 +1206,28 @@ case STATE_FINAL_RNUM: {
             
 
             case STATE_ID_START: {
-                // Read an identifier (or keyword) starting with a letter or underscore.
-                // Here we continue until a digit or non-alphanumeric is encountered.
+    
+    
                 while ((isalnum(*forward) || *forward == '_')) {
-                    // If we hit a digit in the middle, break out of the loop.
+    
                     if (isdigit(*forward)) {
                         break;
                     }
                     lexeme[counter++] = *forward;
                     incrementForward(B);
                 }
-                lexeme[counter] = '\0';  // Terminate the identifier string
+                lexeme[counter] = '\0';  
             
-                // Check if the current lexeme is a reserved keyword like "endrecord"
+
                 if (isKeyword(lexeme)) {
-                    // For example, if lexeme equals "endrecord", then return TK_ENDRECORD
+
                     createToken(&t, getKeywordToken(lexeme), lineCount, lexeme);
                 } else {
-                    // Otherwise, treat it as a field identifier token
+                    
                     createToken(&t, TK_FIELDID, lineCount, lexeme);
                 }
                 setBeginToForward(B);
-                // Return the token (this will be "endrecorb" in our example)
+                
                 return t;
             }
             

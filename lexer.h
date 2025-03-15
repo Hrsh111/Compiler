@@ -5,8 +5,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <ctype.h>
-FILE *initialise(char *inputFile);  // The original function declaration
-#define init_lexer initialise  // Define init_lexer as an alias for initialise
+FILE *initialise(char *inputFile);  
+#define init_lexer initialise  
 
 
 FILE *initialise(char *inputFile);

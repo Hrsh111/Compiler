@@ -60,7 +60,7 @@ typedef enum {
     NT_ID_LIST,
     NT_MORE_IDS,
     NT_DEFINETYPE_STMT,
-    TOTAL_NON_TERMINALS // ✅ Always at the end
+    TOTAL_NON_TERMINALS 
 } NonTerminal;
 
 

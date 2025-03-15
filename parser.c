@@ -191,15 +191,15 @@ GrammarRule grammarRules[] = {
 
 
 
-// Returns 1 if the symbol is a terminal, 0 otherwise.
+
 int isTerminal(const char *symbol) {
-    // For example, assume terminals start with "TK_"
+
     if (strncmp(symbol, "TK_", 3) == 0)
         return 1;
     return 0;
 }
 
-// Returns the index of the terminal in the tokenStrings array; -1 if not found.
+
 int getTerminalIndex(const char *terminal) {
     for (int i = 0; i < (int)NUM_TERMINALS; i++) {
         if (strcmp(tokenStrings[i], terminal) == 0)
@@ -209,10 +209,10 @@ int getTerminalIndex(const char *terminal) {
 }
 int numGrammarRules = sizeof(grammarRules) / sizeof(grammarRules[0]);
 int isNonTerminal(const char *symbol) {
-    // Treat "epsilon" as a special marker (not a non-terminal)
+
     if (strcmp(symbol, "epsilon") == 0)
         return 0;
-    // If symbol starts with "TK_", then it is a terminal.
+
     if (strncmp(symbol, "TK_", 3) == 0)
         return 0;
     return 1;

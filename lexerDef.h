@@ -4,13 +4,13 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-// Macros
+
 #define BUFFER_SIZE 4096
 #define N_TC 54
 #define TC 59
 #define KC 28
 #define HASH_TABLE_SIZE (1<<20)
-// Token type enumeration
+
 typedef enum {
     TK_GT, TK_LT, TK_ASSIGNOP, TK_COMMENT, TK_EQ, TK_PLUS, TK_NE, TK_LE, TK_GE,
     TK_SQR, TK_SQL, TK_OR, TK_NOT, TK_AND, TK_ID, TK_FIELDID, TK_DIV, TK_MUL,
@@ -48,10 +48,7 @@ static const char* nonTerminals[] = {
 };
 
 
-//-----------------------------------------------------
-// Type Definitions
 
-// Structure for Twin Buffer 
 typedef struct TwinBuffer {
     char buffer1[BUFFER_SIZE];
     char buffer2[BUFFER_SIZE];
@@ -64,10 +61,10 @@ typedef struct Field {
     struct Field *next;
 } Field;
 
-// Struct for symbol table item 
+
 typedef struct SymbolTableitem {
     char *lexeme;
-    // Use the terminals enum type (or int) for token type.
+    
     int token;  
     char *type;
     union { 
@@ -86,31 +83,30 @@ typedef struct SymbolTableitem {
 
 
 
-// Symbol table struct 
+
 typedef struct {
     SymbolItem *data[HASH_TABLE_SIZE];
     int currentsize;
 } Symboltable;
 
 typedef struct tokenInfo {
-    terminals token;      // Token type from the enum
-    char lexeme[256];     // Buffer to store the lexeme text
-    int lineNumber;       // The line where the token appears
+    terminals token;      
+    char lexeme[256];     
+    int lineNumber;       
 } tokenInfo;
 
-// Keyword struct 
+
 typedef struct {
     const char *keyword;
     int token;
 } keyword;
 
 
-//-----------------------------------------------------
-// Extern Variable Declarations (no initializers here)
+
 extern int lineCount;
 extern char *forward;
 extern char *lexemebegin;
-extern int activeBuffer;       // 1 for buffer1, 2 for buffer2
+extern int activeBuffer;     
 extern FILE *srcFile;
 extern bool exhaustedInput;
 extern bool ldfirstBuff;
