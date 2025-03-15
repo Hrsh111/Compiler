@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include "parser.h"
+#include "stack.h"        
 #define INIT_CAPACITY 8
 #define NUM_TERMINALS (sizeof(tokenStrings)/sizeof(tokenStrings[0]))
 
@@ -217,31 +218,8 @@ int isNonTerminal(const char *symbol) {
     return 1;
 }
 
-/*int getNonTerminalIndex(const char *nonTerminal) {
-    static const char *nonTerminals[] = {
-        "program", "mainFunction", "otherFunctions", "function", "input_par",
-        "output_par", "parameter_list", "dataType", "primitiveDatatype",
-        "constructedDatatype", "remaining_list", "stmts", "typeDefinitions",
-        "actualOrRedefined", "typeDefinition", "fieldDefinitions", "fieldDefinition",
-        "fieldType", "moreFields", "declarations", "declaration", "global_or_not",
-        "otherStmts", "stmt", "assignmentStmt", "singleOrRecId", "option_single_constructed",
-        "oneExpansion", "moreExpansions", "funCallStmt", "outputParameters", "inputParameters",
-        "conditionalStmt", "elsePart", "ioStmt", "arithmeticExpression", "expPrime",
-        "term", "termPrime", "factor", "highPrecedenceOperators", "lowPrecedenceOperators",
-        "booleanExpression", "logicalOp", "relationalOp", "returnStmt", "optionalReturn",
-        "idList", "more_ids", "definetypestmt", "A", "var","opt_input_par", "iterativeStmt", "SingleOrRecId", NULL
-    };
-    for (int i = 0; nonTerminals[i] != NULL; i++) {
-        if (strcmp(nonTerminal, nonTerminals[i]) == 0)
-            return i;
-    }
-    printf("ERROR: Non-terminal '%s' not found\n", nonTerminal);
-    return -1;
-}*/
-// Compute FIRST and FOLLOW sets for the given grammar.
-// G->rules: array of GrammarRule; G->numRules: total productions; G->startSymbol: start symbol.
 FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
-    // Allocate an array for each non-terminal.
+
     FirstFollow *ff = malloc(numNonTerminals * sizeof(FirstFollow));
     if (!ff) { perror("malloc"); exit(EXIT_FAILURE); }
 
@@ -257,7 +235,7 @@ FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
         if (!ff[i].follow) { perror("malloc follow"); exit(EXIT_FAILURE); }
     }
 
-    // --- FIRST SET COMPUTATION ---
+
     int changed = 1;
     while (changed) {
         changed = 0;
@@ -305,9 +283,9 @@ FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
 
             for (int t = 0; t < tempCount; t++) {
                 if (temp[t] != NULL && !containsSymbol(ff[A_index].first, ff[A_index].firstCount, temp[t])) {
-                    // 🚨 Check if FIRST set is full before adding
+
                     if (ff[A_index].firstCount >= ff[A_index].firstCapacity) {
-                        ff[A_index].firstCapacity *= 2;  // Double the capacity
+                        ff[A_index].firstCapacity *= 2; 
                         ff[A_index].first = realloc(ff[A_index].first, ff[A_index].firstCapacity * sizeof(char *));
                         if (!ff[A_index].first) {
                             fprintf(stderr, "ERROR: Memory allocation failed while expanding FIRST set\n");
@@ -326,15 +304,13 @@ FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
     }
 
     
-    // --- FOLLOW SET COMPUTATION ---
-    // For the start symbol, add the end marker "$".
     int startIndex = getNonTerminalIndex(G->startSymbol);
     addSymbol(&ff[startIndex].follow, &ff[startIndex].followCount, &ff[startIndex].followCapacity, "$");
     
     changed = 1;
     while (changed) {
         changed = 0;
-        // For each production A -> X1 X2 ... Xn
+
         for (int i = 0; i < G->numRules; i++) {
             GrammarRule rule = G->rules[i];
             int A_index = getNonTerminalIndex(rule.lhs);
@@ -343,7 +319,7 @@ FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
                 continue;
             }
             
-            // For each symbol X in the RHS
+
             for (int j = 0; j < rule.rhsSize; j++) {
                 char *X = rule.rhs[j];
                 if (isNonTerminal(X)) {
@@ -375,19 +351,19 @@ FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
                             }
                         }
                     }
-                    // Merge firstBeta into FOLLOW(X)
+
                     for (int t = 0; t < betaCount; t++) {
                         if (!containsSymbol(ff[X_index].follow, ff[X_index].followCount, firstBeta[t])) {
                             addSymbol(&ff[X_index].follow, &ff[X_index].followCount, &ff[X_index].followCapacity, firstBeta[t]);
                             changed = 1;
                         }
                     }
-                    // Free firstBeta array.
+
                     for (int t = 0; t < betaCount; t++)
                         free(firstBeta[t]);
                     free(firstBeta);
                     
-                    // If beta is empty or beta is nullable, add FOLLOW(A) to FOLLOW(X)
+
                     if (betaNullable || j == rule.rhsSize - 1) {
                         for (int t = 0; t < ff[A_index].followCount; t++) {
                             if (!containsSymbol(ff[X_index].follow, ff[X_index].followCount, ff[A_index].follow[t])) {
@@ -404,51 +380,43 @@ FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
     return ff;
 }
 
-// --- createParseTable Function ---
-// We assume that FIRST and FOLLOW sets have been computed for each non-terminal
-// and stored in an array `ffArr` of length 'numNonTerminals'.
-// The parse table is a 2D array: rows correspond to non-terminals (by index),
-// columns correspond to terminals (by index). We set the cell to the production number
-// that should be applied when the non-terminal (row) and terminal (column) are encountered.
-// If no production applies, the cell remains -1.
+
 
 void createParseTable(FirstFollow *ffArr, int numNonTerminals, int table[TOTAL_NON_TERMINALS][NUM_TERMINALS]) {
-    // Initialize parse table cells to -1.
+
     for (int i = 0; i < numNonTerminals; i++) {
         for (int j = 0; j < (int)NUM_TERMINALS; j++) {
             table[i][j] = -1;
         }
     }
     
-    // Iterate over each production rule in your grammar.
-    // Assume 'grammarRules' is a global array of GrammarRule and 'numGrammarRules' is defined.
-     // For each production A -> α
+    
     for (int prod = 0; prod < numGrammarRules; prod++) {
         GrammarRule rule = grammarRules[prod];
-        // Get the index of the LHS non-terminal.
+
         int A_index = getNonTerminalIndex(rule.lhs);
         if (A_index == -1) {
-            printf("❌ ERROR: Non-terminal '%s' not found in index!\n", rule.lhs);
+            printf(" ERROR: Non-terminal '%s' not found in index!\n", rule.lhs);
             continue;
         }
         
-        // Create a temporary dynamic array to hold FIRST(alpha) for the RHS (alpha).
+
         char **firstAlpha = malloc(INIT_CAPACITY * sizeof(char *));
         int firstAlphaCount = 0, firstAlphaCapacity = INIT_CAPACITY;
         int allNullable = 1;
         
-        // For each symbol in the RHS, from left to right.
+
         for (int j = 0; j < rule.rhsSize; j++) {
             char *X = rule.rhs[j];
             if (!isNonTerminal(X)) {
-                // X is a terminal. (It might be "epsilon", but normally epsilon appears only in nullable productions.)
+
                 if (strcmp(X, "epsilon") != 0) {
                     addSymbol(&firstAlpha, &firstAlphaCount, &firstAlphaCapacity, X);
                 }
                 allNullable = 0;
                 break;
             } else {
-                // X is a non-terminal. Get its FIRST set from ffArr.
+
                 int X_index = getNonTerminalIndex(X);
                 if (X_index == -1) {
                     printf("WARNING: RHS non-terminal '%s' not found in index!\n", X);
@@ -461,24 +429,24 @@ void createParseTable(FirstFollow *ffArr, int numNonTerminals, int table[TOTAL_N
                         addSymbol(&firstAlpha, &firstAlphaCount, &firstAlphaCapacity, sym);
                     }
                 }
-                // If X's FIRST set does not contain "epsilon", stop.
+
                 if (!containsSymbol(ffArr[X_index].first, ffArr[X_index].firstCount, "epsilon")) {
                     allNullable = 0;
                     break;
                 }
             }
         }
-        // If all symbols in the RHS can derive epsilon, then add "epsilon".
+
         if (allNullable) {
             addSymbol(&firstAlpha, &firstAlphaCount, &firstAlphaCapacity, "epsilon");
         }
         
-        // For each terminal in FIRST(alpha) (except epsilon), update the parse table.
+
         for (int i = 0; i < firstAlphaCount; i++) {
             if (strcmp(firstAlpha[i], "epsilon") != 0) {
                 int termIndex = getTerminalIndex(firstAlpha[i]);
                 if (termIndex != -1) {
-                    // Set the production number for the cell (A_index, termIndex).
+
                     printf(" Adding rule: %s -> %s at parseTable[%d][%d]\n", 
                         rule.lhs, rule.rhs[0], A_index, termIndex);
                 table[A_index][termIndex] = prod;
@@ -486,7 +454,7 @@ void createParseTable(FirstFollow *ffArr, int numNonTerminals, int table[TOTAL_N
                 }
             }
         }
-        // If epsilon is in FIRST(alpha), then for each terminal in FOLLOW(A), update the table.
+
         if (containsSymbol(firstAlpha, firstAlphaCount, "epsilon")) {
             for (int i = 0; i < ffArr[A_index].followCount; i++) {
                 int termIndex = getTerminalIndex(ffArr[A_index].follow[i]);
@@ -496,7 +464,7 @@ void createParseTable(FirstFollow *ffArr, int numNonTerminals, int table[TOTAL_N
             }
         }
         
-        // Free temporary FIRST(alpha) array.
+
         for (int i = 0; i < firstAlphaCount; i++) {
             free(firstAlpha[i]);
         }
@@ -505,12 +473,10 @@ void createParseTable(FirstFollow *ffArr, int numNonTerminals, int table[TOTAL_N
 }
 
 
-#include "stack.h"         // Assumed to provide a stack for ParseTreeNode pointers (createStack, push, pop, peek, isStackEmpty)
 
 
-// Helper function to create a new parse tree node.
-// This function allocates memory for a ParseTreeNode, sets the nodeSymbol, and initializes other fields.
-// Helper function to create a new parse tree node.
+
+
 ParseTreeNode* createParseTreeNode(const char *symbol) {
     ParseTreeNode *node = (ParseTreeNode*)malloc(sizeof(ParseTreeNode));
     if (node==NULL) {
@@ -542,34 +508,34 @@ ParseTreeNode* createParseTreeNode(const char *symbol) {
 
 ParseTreeNode* parseInputSourceCode(char *testcaseFile, int parseTable[TOTAL_NON_TERMINALS][NUM_TERMINALS])
  {
-    // Initialize the lexer with the input source file.
+
     init_lexer(testcaseFile);
     
 
-    // Create the parse tree root node with the start symbol "program".
+
     ParseTreeNode *root = createParseTreeNode("program");
 
-    // Create and initialize the parser stack.
+
     Stack *stack = createStack();
-    // Push the end marker "$" and the start symbol.
+
     push(stack, createStackNode("$", NULL));
     push(stack, createStackNode("program", root));
 
-    // Fetch the first token from the lexer.
+
     tokenInfo token = getNextToken(&twinBuffer);
     do {
         token = getNextToken(&twinBuffer);
     } while (token.token == TK_COMMENT); 
 
-    // Main parsing loop.
+
     while (!isStackEmpty(stack)) {
         StackNode *top = peek(stack);
         char *X = top->symbol;
 
-        // If X is a terminal (or the end marker "$")
+
         if (isTerminal(X) || strcmp(X, "$") == 0) {
             if (strcmp(X, tokenStrings[token.token]) == 0) {
-                // Terminal match: attach token info to the parse tree node.
+
                 top->node->tokenName = strdup(tokenStrings[token.token]);
                 top->node->lexeme = strdup(token.lexeme);
                 top->node->lineno = token.lineNumber;
@@ -582,28 +548,28 @@ ParseTreeNode* parseInputSourceCode(char *testcaseFile, int parseTable[TOTAL_NON
                 return NULL;
             }
         } else {
-            // X is a non-terminal.
+
 int nonTerminalIndex = getNonTerminalIndex(X);
 int tokenIndex = getTerminalIndex(tokenStrings[token.token]);
 
-// Ensure indices are valid before accessing the parse table
+
 if (nonTerminalIndex < 0 || nonTerminalIndex >= (int)TOTAL_NON_TERMINALS ||
     tokenIndex < 0 || tokenIndex >= (int)NUM_TERMINALS) {
     fprintf(stderr, "Syntax error at line %d: invalid non-terminal %s or token %s\n",
             token.lineNumber, X, tokenStrings[token.token]);
-    freeParseTree(root); // Free allocated memory before exiting
+    freeParseTree(root);
     exit(EXIT_FAILURE);
     return NULL;
 }
 
-// Initialize prod safely
+
 int prod = -1;
 prod = parseTable[nonTerminalIndex][tokenIndex];
 
 if (prod == -1) {
     fprintf(stderr, "Syntax error at line %d: no rule for non-terminal %s with token %s\n",
             token.lineNumber, X, tokenStrings[token.token]);
-    freeParseTree(root); // Free allocated memory before exiting
+    freeParseTree(root);
     return NULL;
 }
 
@@ -644,8 +610,6 @@ if (prod == -1) {
     return root;
 }
 
-// Helper function to print a single node’s information.
-// 'nodeCounter' is used to assign a unique order number to each visited node.
 void printNodeInfo(ParseTreeNode *node, FILE *fp, int nodeCounter) {
     char lexemeStr[20];
     char tokenNameStr[20];
@@ -654,25 +618,25 @@ void printNodeInfo(ParseTreeNode *node, FILE *fp, int nodeCounter) {
     char isLeafStr[5];
     char nodeSymbolStr[20];
 
-    // Column 1: Lexeme (only if leaf)
+
     if (node->isLeafNode && node->lexeme != NULL)
         snprintf(lexemeStr, sizeof(lexemeStr), "%s", node->lexeme);
     else
         snprintf(lexemeStr, sizeof(lexemeStr), "----");
 
-    // Column 2: Current node number (order of visit)
+
     int currNodeNum = nodeCounter;
 
-    // Column 3: Line number
+
     int lineNo = node->lineno;
 
-    // Column 4: Token name (only for leaf nodes)
+
     if (node->isLeafNode && node->tokenName != NULL)
         snprintf(tokenNameStr, sizeof(tokenNameStr), "%s", node->tokenName);
     else
         snprintf(tokenNameStr, sizeof(tokenNameStr), "----");
 
-    // Column 5: Value if number (if token is TK_NUM or TK_RNUM)
+
     if (node->isLeafNode && node->tokenName != NULL && 
        (strcmp(node->tokenName, "TK_NUM") == 0 || strcmp(node->tokenName, "TK_RNUM") == 0))
     {
@@ -681,60 +645,53 @@ void printNodeInfo(ParseTreeNode *node, FILE *fp, int nodeCounter) {
         snprintf(valueStr, sizeof(valueStr), "----");
     }
 
-    // Column 6: Parent node symbol (if not available, print ROOT)
+
     if (node->parentNodeSymbol != NULL)
         snprintf(parentStr, sizeof(parentStr), "%s", node->parentNodeSymbol);
     else
         snprintf(parentStr, sizeof(parentStr), "ROOT");
 
-    // Column 7: isLeafNode (yes/no)
+
     snprintf(isLeafStr, sizeof(isLeafStr), "%s", node->isLeafNode ? "yes" : "no");
 
-    // Column 8: Node symbol (if non-leaf, print actual non-terminal symbol; else dummy)
+
     if (!node->isLeafNode && node->nodeSymbol != NULL)
         snprintf(nodeSymbolStr, sizeof(nodeSymbolStr), "%s", node->nodeSymbol);
     else
         snprintf(nodeSymbolStr, sizeof(nodeSymbolStr), "----");
 
-    // Print the row with appropriate fixed widths.
-    // Field widths: lexeme(15), current node (5), lineno (5), tokenName (15), value (15),
-    // parent (15), isLeaf (5), nodeSymbol (15)
     fprintf(fp, "%-15s %-5d %-5d %-15s %-15s %-15s %-5s %-15s\n",
             lexemeStr, currNodeNum, lineNo, tokenNameStr, valueStr, parentStr, isLeafStr, nodeSymbolStr);
 }
 
-// Recursive helper function to perform inorder traversal on the parse tree.
-// For an n-ary tree, we define inorder as:
-//   - If there are children, traverse the first half, then print the current node,
-//     then traverse the remaining children.
-//   - If the node is a leaf, simply print it.
+
 void printParseTreeHelper(ParseTreeNode *node, FILE *fp, int *counter) {
     if (node == NULL)
         return;
 
-    // If the node has children, we perform a split for inorder.
+
     if (node->numChildren > 0) {
         int mid = node->numChildren / 2;
         ParseTreeNode **childArray = (ParseTreeNode **)node->children;
-        // Traverse the first half of the children.
+
         for (int i = 0; i < mid; i++) {
             printParseTreeHelper(childArray[i], fp, counter);
         }
-        // Print the current (non-leaf) node.
+
         (*counter)++;
         printNodeInfo(node, fp, *counter);
-        // Traverse the remaining children.
+
         for (int i = mid; i < node->numChildren; i++) {
             printParseTreeHelper(childArray[i], fp, counter);
         }
     } else {
-        // For leaf nodes, simply print the node.
+
         (*counter)++;
         printNodeInfo(node, fp, *counter);
     }
 }
 
-// Main function to print the parse tree to the file 'outfile' in inorder.
+
 void printParseTree(ParseTree *PT, char *outfile) {
     if (PT == NULL || PT->root == NULL) {
         fprintf(stderr, "Parse Tree is empty.\n");
@@ -747,10 +704,10 @@ void printParseTree(ParseTree *PT, char *outfile) {
         return;
     }
 
-    // Print a header (optional).
+
     fprintf(fp, "%-15s %-5s %-5s %-15s %-15s %-15s %-5s %-15s\n",
             "Lexeme", "Node#", "Lineno", "TokenName", "Value", "Parent", "Leaf", "NodeSymbol");
-    fprintf(fp, "------------------------------------------------------------------------------------------\n");
+    fprintf(fp, "-----------------------------------\n");
 
     int nodeCounter = 0;
     printParseTreeHelper(PT->root, fp, &nodeCounter);

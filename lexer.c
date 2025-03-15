@@ -19,7 +19,7 @@ Symboltable *table = NULL;
 keyword *kwEntries[KC] = {NULL};
 
 FILE *initialise(char *inputFile) {
-    srcFile = fopen(inputFile, "r");  // Open file for reading
+    srcFile = fopen(inputFile, "r");  
     if (srcFile == NULL) {
         printf("ERROR! Could not open file: %s\n", inputFile);
         return NULL;
@@ -33,22 +33,22 @@ FILE *initialise(char *inputFile) {
         return NULL;
     }
 
-    // Handle end-of-file scenarios
+
     if (size < BUFFER_SIZE) {
-        if(size>=0)twinBuffer.buffer1[size] = EOF;  // Mark EOF in buffer
+        if(size>=0)twinBuffer.buffer1[size] = EOF;  
         exhaustedInput = true;
     } else {
         exhaustedInput = false;
     }
 
-    // Initialize twin buffer pointers
+
     activeBuffer = 1;
     ldfirstBuff = true;
     ldsecondBuff = false;
     lexemebegin = twinBuffer.buffer1;
     forward = twinBuffer.buffer1;
 
-    // Initialize Symbol Table (Ensure this function is correctly defined)
+
     initializeSymbolTable(&table);
 
     printf("File %s opened and initialized successfully.\n", inputFile);
@@ -138,7 +138,7 @@ void initializeKeywords()
         kwEntries[i]->token = reservedList[i].token;
     }
 }
-// initializing the symbol table use chain hashing
+
 void initializeSymbolTable(Symboltable **table)
 {
     *table = (Symboltable *)calloc(1, sizeof(Symboltable));
@@ -154,15 +154,12 @@ void initializeSymbolTable(Symboltable **table)
         insert(kwEntries[i]->keyword, kwEntries[i]->token);
     }
 }
-// djb2 algorithm
+
 int CalHash(const char *lexeme)
 {
     unsigned long h = 5381;
     int c;
     while ((c = *lexeme++))
-        // left shit by 5 bits(2^5=32)
-        // h=h*(32+1)+c
-        // h*33+c
         h = ((h << 5) + h) + c;
     return h % HASH_TABLE_SIZE;
 }
@@ -634,8 +631,15 @@ typedef enum {
     STATE_LT,
     STATE_LE,
     STATE_ASSIGNOP,
-    STATE_NUM,          
+    STATE_NUM,  
+    STATE_REAL_FRACTION1,
+    STATE_REAL_FRACTION2, 
+    STATE_EXPONENT_CHECK,       
+    STATE_EXP_DIGIT1,
+    STATE_EXP_DIGIT2,
+    STATE_FINAL_RNUM,
     STATE_AFTER_DOT,    
+    STATE_EXP_SIGN,
     STATE_RNUM,         
     STATE_ID_START, 
     STATE_RUID,    
@@ -999,19 +1003,47 @@ tokenInfo getNextToken(TwinBuffer *B) {
             }
 
             case STATE_LT: {
+                // After reading '<' in state 0, now check the next character:
                 c = *forward;
-                if (c == '=') {
-                    lexeme[counter++] = c;
+                if (c == '-') {
+                    // Found a '-', expect two more '-' for a complete "<---"
+                    lexeme[counter++] = c; // Append first '-'
                     incrementForward(B);
-                    lexeme[counter] = '\0';
-                    createToken(&t, TK_LE, lineCount, lexeme);
-                } else {
-
-                    lexeme[counter] = '\0';
-                    createToken(&t, TK_LT, lineCount, lexeme);
+                    if (*forward == '-') {
+                        lexeme[counter++] = *forward; // Append second '-'
+                        incrementForward(B);
+                        if (*forward == '-') {
+                            lexeme[counter++] = *forward; // Append third '-'
+                            incrementForward(B);
+                            lexeme[counter] = '\0';
+                            createToken(&t, TK_ASSIGNOP, lineCount, lexeme);
+                            setBeginToForward(B);
+                            return t;
+                        } else {
+                            // Not three '-' in a row
+                            state = STATE_ERROR;
+                        }
+                    } else {
+                        state = STATE_ERROR;
+                    }
                 }
-                setBeginToForward(B);
-                return t;
+                else if (c == '=') {
+                     // Handle "<=" operator:
+                     lexeme[counter++] = c;
+                     incrementForward(B);
+                     lexeme[counter] = '\0';
+                     createToken(&t, TK_LE, lineCount, lexeme);
+                     setBeginToForward(B);
+                     return t;
+                }
+                else {
+                     // No '-' or '=' after '<', so it's just a TK_LT token:
+                     lexeme[counter] = '\0';
+                     createToken(&t, TK_LT, lineCount, lexeme);
+                     setBeginToForward(B);
+                     return t;
+                }
+                break;
             }
             
 
@@ -1034,27 +1066,117 @@ tokenInfo getNextToken(TwinBuffer *B) {
                 }
                 break;
             }
+// Numeric token processing
 
-            case STATE_NUM: {
+case STATE_NUM: {
+    // Check for end-of-file or string termination before processing further
+    if (*forward == '\0' || *forward == EOF) {
+        createToken(&t, TK_NUM, lineCount, lexeme);
+        setBeginToForward(B);
+        return t;
+    }
+    char next = *forward;
+    if (isdigit(next)) {
+        lexeme[counter++] = next;
+        incrementForward(B);
+        state = STATE_NUM;  // Remain in numeric state
+    }
+    else if (next == '.') {
+        lexeme[counter++] = next;
+        incrementForward(B);
+        state = STATE_AFTER_DOT;  // Transition to process fractional part
+    }
+    else {
+        // If a non-digit (and non-dot) is encountered, finalize the number token.
+        createToken(&t, TK_NUM, lineCount, lexeme);
+        setBeginToForward(B);
+        return t;
+    }
+    break;
+}
 
-                char next = *forward;
-                if (isdigit(next)) {
-                    lexeme[counter++] = next;
-                    incrementForward(B);
-                    state = STATE_NUM;
-                }
-                else if (next == '.') {
-                    lexeme[counter++] = next;
-                    incrementForward(B);
-                    state = STATE_AFTER_DOT;
-                }
-                else {
-                    createToken(&t, TK_NUM, lineCount, lexeme);
-                    setBeginToForward(B);
-                    return t;
-                }
-                break;
-            }
+
+case STATE_REAL_FRACTION1: {
+    // Expect the first digit after the dot.
+    if (isdigit(*forward)) {
+        lexeme[counter++] = *forward;
+        incrementForward(B);
+        state = STATE_REAL_FRACTION2;
+    } else {
+        state = STATE_ERROR;
+    }
+    break;
+}
+
+case STATE_REAL_FRACTION2: {
+    // Expect the second digit after the dot.
+    if (isdigit(*forward)) {
+        lexeme[counter++] = *forward;
+        incrementForward(B);
+        state = STATE_EXPONENT_CHECK;
+    } else {
+        state = STATE_ERROR;
+    }
+    break;
+}
+
+case STATE_EXPONENT_CHECK: {
+    // Check for exponent part ('E' or 'e').
+    if (*forward == 'E' || *forward == 'e') {
+        lexeme[counter++] = *forward;
+        incrementForward(B);
+        state = STATE_EXP_SIGN;
+    } else {
+        // No exponent: finalize the real number.
+        retractForward(B);
+        createToken(&t, TK_RNUM, lineCount, lexeme);
+        setBeginToForward(B);
+        return t;
+    }
+    break;
+}
+
+case STATE_EXP_SIGN: {
+    // Optional sign for the exponent.
+    if (*forward == '+' || *forward == '-') {
+        lexeme[counter++] = *forward;
+        incrementForward(B);
+    }
+    state = STATE_EXP_DIGIT1;
+    break;
+}
+
+case STATE_EXP_DIGIT1: {
+    // Expect the first digit of the exponent.
+    if (isdigit(*forward)) {
+        lexeme[counter++] = *forward;
+        incrementForward(B);
+        state = STATE_EXP_DIGIT2;
+    } else {
+        state = STATE_ERROR;
+    }
+    break;
+}
+
+case STATE_EXP_DIGIT2: {
+    // Expect the second digit of the exponent.
+    if (isdigit(*forward)) {
+        lexeme[counter++] = *forward;
+        incrementForward(B);
+        state = STATE_FINAL_RNUM;
+    } else {
+        state = STATE_ERROR;
+    }
+    break;
+}
+
+case STATE_FINAL_RNUM: {
+    // Finalize the real number token with exponent.
+    createToken(&t, TK_RNUM, lineCount, lexeme);
+    setBeginToForward(B);
+    return t;
+}
+
 
             case STATE_AFTER_DOT: {
                 c = *forward;
@@ -1080,21 +1202,36 @@ tokenInfo getNextToken(TwinBuffer *B) {
                 incrementForward(B);
                 break;
             }
+       
+            
 
             case STATE_ID_START: {
-                // Read an identifier (or keyword) starting with a lowercase letter or underscore.
-                while (isalnum(*forward) || *forward == '_') {
+                // Read an identifier (or keyword) starting with a letter or underscore.
+                // Here we continue until a digit or non-alphanumeric is encountered.
+                while ((isalnum(*forward) || *forward == '_')) {
+                    // If we hit a digit in the middle, break out of the loop.
+                    if (isdigit(*forward)) {
+                        break;
+                    }
                     lexeme[counter++] = *forward;
                     incrementForward(B);
                 }
-                lexeme[counter] = '\0';
-                if (isKeyword(lexeme))
+                lexeme[counter] = '\0';  // Terminate the identifier string
+            
+                // Check if the current lexeme is a reserved keyword like "endrecord"
+                if (isKeyword(lexeme)) {
+                    // For example, if lexeme equals "endrecord", then return TK_ENDRECORD
                     createToken(&t, getKeywordToken(lexeme), lineCount, lexeme);
-                else
-                    createToken(&t, TK_ID, lineCount, lexeme);
+                } else {
+                    // Otherwise, treat it as a field identifier token
+                    createToken(&t, TK_FIELDID, lineCount, lexeme);
+                }
                 setBeginToForward(B);
+                // Return the token (this will be "endrecorb" in our example)
                 return t;
             }
+            
+            
             
 
             default: {
@@ -1104,4 +1241,3 @@ tokenInfo getNextToken(TwinBuffer *B) {
         }
     }
     }
-
