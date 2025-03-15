@@ -30,7 +30,7 @@ static const char* tokenStrings[] = {
     "TK_DEFINETYPE", "TK_ELSE", "TK_END", "TK_ENDIF", "TK_ENDWHILE", "TK_ENDRECORD",
     "TK_ENDUNION", "TK_GLOBAL", "TK_IF", "TK_INPUT", "TK_OUTPUT", "TK_INT", "TK_REAL",
     "TK_LIST", "TK_PARAMETERS", "TK_PARAMETER", "TK_READ", "TK_WRITE", "TK_RECORD",
-    "TK_UNION", "TK_RETURN", "TK_THEN", "TK_TYPE", "TK_WHILE", "TK_WITH","TK_AT" "EPS", "END_OF_INPUT"
+    "TK_UNION", "TK_RETURN", "TK_THEN", "TK_TYPE", "TK_WHILE", "TK_WITH","TK_AT", "EPS", "END_OF_INPUT"
 };
 
 static const char* nonTerminals[] = {

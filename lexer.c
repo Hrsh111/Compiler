@@ -282,6 +282,7 @@ void ignoreComment(TwinBuffer *B)
 
 void setBeginToForward(TwinBuffer *B)
 {
+    (void)B;
     lexemebegin = forward;
 }
 void createToken(tokenInfo *tk, terminals tokenType, int line, const char *lexeme)
@@ -554,6 +555,7 @@ terminals getKeywordToken(const char *lex)
 }
 void incrementForward(TwinBuffer *B)
 {
+    (void)B;
     forward++;
 
     if (activeBuffer == 1)
@@ -574,6 +576,7 @@ void incrementForward(TwinBuffer *B)
 
 void retractForward(TwinBuffer *B)
 {
+    (void)B;
     if (forward > lexemebegin)
     {
         forward--;
@@ -945,6 +948,7 @@ tokenInfo getNextToken(TwinBuffer *B) {
                 else {
                     state = STATE_FINAL;
                 break;
+                }
             }
 
             case STATE_GE: {
@@ -1067,4 +1071,5 @@ tokenInfo getNextToken(TwinBuffer *B) {
             }
         }
     }
-}
+    }
+

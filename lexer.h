@@ -5,6 +5,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <ctype.h>
+FILE *initialise(char *inputFile);  // The original function declaration
+#define init_lexer initialise  // Define init_lexer as an alias for initialise
 
 
 FILE *initialise(char *inputFile);
@@ -32,6 +34,7 @@ void flush(char *str);
 void createToken(tokenInfo *tk, terminals tokenType, int line, const char *lexeme);
 char fetchNextChar(void);
 void recoverFromError(TwinBuffer *B);
+
 
 
 int isKeyword(const char *lex);
