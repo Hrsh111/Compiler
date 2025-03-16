@@ -1,19 +1,37 @@
-CC=gcc
-CFLAGS=-Wall -Wextra -std=c99
 
-all: compiler
+CC = gcc
+CFLAGS = -Wall -Wextra -std=c99
 
-compiler: lexer.o parser.o driver.o
-	$(CC) $(CFLAGS) lexer.o parser.o driver.o -o compiler
+
+TARGET = myCompiler
+
+
+SOURCES = driver1.c lexer.c parser.c stack.c
+OBJECTS = $(SOURCES:.c=.o)
+
+
+all: $(TARGET)
+
+
+$(TARGET): $(OBJECTS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJECTS)
+
+
+driver1.o: driver1.c lexer.h parser.h parserDef.h
+	$(CC) $(CFLAGS) -c driver1.c
+
 
 lexer.o: lexer.c lexer.h lexerDef.h
 	$(CC) $(CFLAGS) -c lexer.c
 
-parser.o: parser.c parser.h parserDef.h lexer.h
+
+parser.o: parser.c parser.h parserDef.h stack.h lexerDef.h
 	$(CC) $(CFLAGS) -c parser.c
 
-driver.o: driver.c lexer.h parser.h
-	$(CC) $(CFLAGS) -c driver.c
+
+stack.o: stack.c
+	$(CC) $(CFLAGS) -c stack.c
+
 
 clean:
-	rm -f *.o compiler
+	rm -f $(OBJECTS) $(TARGET)
