@@ -21,7 +21,7 @@ extern const char *TERMINALS_STRINGS[];
 /*--------------------------------------------------
   Grammar Loader (Dynamic Grammar)
 --------------------------------------------------*/
-// Helper function: trim leading and trailing whitespace.
+
 char *trim(char *str) {
     char *end;
     while (*str == ' ' || *str == '\t')
@@ -35,7 +35,7 @@ char *trim(char *str) {
     return str;
 }
 
-// Loader function: Reads a grammar file and returns a Grammar pointer.
+
 Grammar* loadGrammar(const char *filename) {
     FILE *fp = fopen(filename, "r");
     if (!fp) {
@@ -75,11 +75,11 @@ Grammar* loadGrammar(const char *filename) {
             perror("malloc rhs");
             exit(EXIT_FAILURE);
         }
-        // The rest are RHS symbols.
+
         while ((token = strtok(NULL, " \t")) != NULL) {
-            // Treat "ε" or "epsilon" as an epsilon production (empty RHS)
+
             if (strcmp(token, "ε") == 0 || strcmp(token, "epsilon") == 0) {
-                continue; // Skip adding any symbol for epsilon
+                continue; 
             }
             if (rule->rhsCount == rhsCapacity) {
                 rhsCapacity *= 2;
@@ -112,14 +112,12 @@ Grammar* loadGrammar(const char *filename) {
     }
     G->rules = rules;
     G->numRules = count;
-    // Set the start symbol (adjust if necessary).
+
     G->startSymbol = strdup("program");
     return G;
 }
 
-/*--------------------------------------------------
-  Utility Functions for FIRST/FOLLOW and Parse Table
---------------------------------------------------*/
+
 int containsSymbol(char **arr, int count, const char *symbol) {
     for (int i = 0; i < count; i++) {
         if (strcmp(arr[i], symbol) == 0)
@@ -226,9 +224,7 @@ int isNonTerminal(const char *symbol) {
     return (!isTerminal(symbol));
 }
 
-/*-----------------------------------------
-   FIRST/FOLLOW and Parse Table Construction
------------------------------------------*/
+
 FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
     if (DEBUG) printf("\nComputing FIRST & FOLLOW sets for %d non-terminals...\n", numNonTerminals);
 
@@ -261,25 +257,25 @@ FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
                 continue;
             }
 
-            // If the production has an empty RHS, add TK_EPS to FIRST(A)
+
             if (rule->rhsCount == 0) {
                 if (addSymbol(&ff[A_index].first, &ff[A_index].firstCount, 
                               &ff[A_index].firstCapacity, "TK_EPS"))
                     changed = 1;
-                continue; // Move on to the next rule.
+                continue; 
             }
 
-            int allNullable = 1;  // Assume entire RHS can derive epsilon
+            int allNullable = 1;  
             for (int j = 0; j < rule->rhsCount; j++) {
                 char *X = rule->rhs[j];
 
                 if (!isNonTerminal(X)) {
-                    // X is a terminal. Add it to FIRST(A).
+                   
                     if (addSymbol(&ff[A_index].first, &ff[A_index].firstCount, 
                                   &ff[A_index].firstCapacity, X))
                         changed = 1;
                     allNullable = 0;
-                    break;  // Stop at the first terminal.
+                    break;  
                 } else {
                     int X_index = getNonTerminalIndex(X);
                     if (X_index < 0 || X_index >= numNonTerminals) {
@@ -287,7 +283,7 @@ FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
                         continue;
                     }
 
-                    // Add all non-epsilon symbols from FIRST(X) to FIRST(A)
+                   
                     for (int k = 0; k < ff[X_index].firstCount; k++) {
                         if (strcmp(ff[X_index].first[k], "TK_EPS") != 0) {
                             if (addSymbol(&ff[A_index].first, &ff[A_index].firstCount, 
@@ -296,7 +292,7 @@ FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
                         }
                     }
 
-                    // If FIRST(X) does not contain epsilon, stop.
+                   
                     if (!containsSymbol(ff[X_index].first, ff[X_index].firstCount, "TK_EPS")) {
                         allNullable = 0;
                         break;
@@ -304,7 +300,7 @@ FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
                 }
             }
 
-            // If every symbol in the RHS can derive epsilon, then add TK_EPS.
+           
             if (allNullable) {
                 if (addSymbol(&ff[A_index].first, &ff[A_index].firstCount, 
                               &ff[A_index].firstCapacity, "TK_EPS"))
@@ -313,7 +309,7 @@ FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
         }
     }
 
-    // Compute FOLLOW sets
+
     if (DEBUG) printf("\n[Computing FOLLOW Sets...]\n");
 
     int startIndex = getNonTerminalIndex(G->startSymbol);
@@ -462,9 +458,7 @@ void createParseTable(FirstFollow *ffArr, int numNonTerminals, Grammar *G, int t
     }
 }
 
-/*-----------------------------------------
-   Parse Tree and Parser Functions
------------------------------------------*/
+
 ParseTreeNode* createParseTreeNode(const char *symbol) {
     ParseTreeNode *node = malloc(sizeof(ParseTreeNode));
     if (node == NULL) {
@@ -510,7 +504,7 @@ ParseTreeNode* parseInputSourceCode(char *testcaseFile, int parseTable[TOTAL_NON
     push(stack, createStackNode("program", root));
     
     tokenInfo token = getNextToken(&twinBuffer);
-    // Skip any initial comment tokens.
+
     while (token.token == TK_COMMENT)
         token = getNextToken(&twinBuffer);
     
@@ -560,7 +554,7 @@ ParseTreeNode* parseInputSourceCode(char *testcaseFile, int parseTable[TOTAL_NON
             GrammarRule *rule = G->rules[prod];
             ParseTreeNode *parentNode = top->node;
             pop(stack);
-            // If the production is an epsilon production, set children to NULL.
+
             if (rule->rhsCount == 1 && strcmp(rule->rhs[0], "TK_EPS") == 0) {
                 parentNode->children = NULL;
                 parentNode->numChildren = 0;
@@ -573,7 +567,7 @@ ParseTreeNode* parseInputSourceCode(char *testcaseFile, int parseTable[TOTAL_NON
                 }
                 parentNode->children = (ParseTreeNode *)childNodes;
                 parentNode->numChildren = numSymbols;
-                // Push children in reverse order onto the stack.
+
                 for (int i = numSymbols - 1; i >= 0; i--) {
                     push(stack, createStackNode(rule->rhs[i], childNodes[i]));
                 }

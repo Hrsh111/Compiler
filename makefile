@@ -6,7 +6,7 @@ CFLAGS = -Wall -Wextra -std=c99
 TARGET = myCompiler
 
 
-SOURCES = driver1.c lexer.c parser.c stack.c
+SOURCES = driver.c lexer.c parser.c stack.c
 OBJECTS = $(SOURCES:.c=.o)
 
 
@@ -17,8 +17,8 @@ $(TARGET): $(OBJECTS)
 	$(CC) $(CFLAGS) -o $(TARGET) $(OBJECTS)
 
 
-driver1.o: driver1.c lexer.h parser.h parserDef.h
-	$(CC) $(CFLAGS) -c driver1.c
+driver.o: driver.c lexer.h parser.h parserDef.h
+	$(CC) $(CFLAGS) -c driver.c
 
 
 lexer.o: lexer.c lexer.h lexerDef.h
