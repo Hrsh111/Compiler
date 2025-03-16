@@ -9,7 +9,8 @@
 #include "parserDef.h"
 #include "parser.h"
 #include "stack.h"
-#define DEBUG 1 
+
+#define DEBUG 1
 
 #define INIT_CAPACITY 8
 #define NUM_TERMINALS (sizeof(tokenStrings)/sizeof(tokenStrings[0]))
@@ -18,10 +19,7 @@
 
 extern const char *TERMINALS_STRINGS[];
 
-/*--------------------------------------------------
-  Grammar Loader (Dynamic Grammar)
---------------------------------------------------*/
-
+// Function to trim leading and trailing whitespace
 char *trim(char *str) {
     char *end;
     while (*str == ' ' || *str == '\t')
@@ -35,89 +33,134 @@ char *trim(char *str) {
     return str;
 }
 
-
+// Function to load grammar from a file
 Grammar* loadGrammar(const char *filename) {
     FILE *fp = fopen(filename, "r");
     if (!fp) {
-        perror("Error opening grammar file");
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "Error opening grammar file: %s\n", filename);
+        return NULL;
     }
-    
+
     int capacity = INIT_RULES_CAPACITY;
     int count = 0;
     GrammarRule **rules = malloc(capacity * sizeof(GrammarRule *));
     if (!rules) {
-        perror("malloc rules");
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "Memory allocation failed for rules\n");
+        fclose(fp);
+        return NULL;
     }
-    
+
     char line[MAX_LINE_LENGTH];
     while (fgets(line, sizeof(line), fp)) {
         line[strcspn(line, "\n")] = '\0'; // Remove newline.
         char *trimmed = trim(line);
         if (strlen(trimmed) == 0 || trimmed[0] == '#')
             continue; // Skip empty lines or comments.
-        
+
         GrammarRule *rule = malloc(sizeof(GrammarRule));
         if (!rule) {
-            perror("malloc rule");
-            exit(EXIT_FAILURE);
+            fprintf(stderr, "Memory allocation failed for rule\n");
+            freeRules(rules, count);
+            fclose(fp);
+            return NULL;
         }
         // The first token is the LHS.
         char *token = strtok(trimmed, " \t");
-        if (!token)
+        if (!token) {
+            fprintf(stderr, "Invalid grammar rule: LHS is empty\n");
+            free(rule);
             continue;
+        }
         rule->lhs = strdup(token);
+        if (!rule->lhs) {
+            fprintf(stderr, "Memory allocation failed for LHS\n");
+            free(rule);
+            continue;
+        }
+
         rule->rhsCount = 0;
         int rhsCapacity = 10;
         rule->rhs = malloc(rhsCapacity * sizeof(char *));
         if (!rule->rhs) {
-            perror("malloc rhs");
-            exit(EXIT_FAILURE);
+            fprintf(stderr, "Memory allocation failed for RHS\n");
+            free(rule->lhs);
+            free(rule);
+            continue;
         }
 
         while ((token = strtok(NULL, " \t")) != NULL) {
-
             if (strcmp(token, "ε") == 0 || strcmp(token, "epsilon") == 0) {
-                continue; 
+                continue;
             }
             if (rule->rhsCount == rhsCapacity) {
                 rhsCapacity *= 2;
                 rule->rhs = realloc(rule->rhs, rhsCapacity * sizeof(char *));
                 if (!rule->rhs) {
-                    perror("realloc rhs");
-                    exit(EXIT_FAILURE);
+                    fprintf(stderr, "Memory reallocation failed for RHS\n");
+                    free(rule->lhs);
+                    freeRules(rule->rhs, rule->rhsCount);
+                    free(rule);
+                    continue;
                 }
             }
             rule->rhs[rule->rhsCount++] = strdup(token);
         }
-        
 
         if (count == capacity) {
             capacity *= 2;
             rules = realloc(rules, capacity * sizeof(GrammarRule *));
             if (!rules) {
-                perror("realloc rules");
-                exit(EXIT_FAILURE);
+                fprintf(stderr, "Memory reallocation failed for rules\n");
+                freeRules(rules, count);
+                fclose(fp);
+                return NULL;
             }
         }
         rules[count++] = rule;
     }
     fclose(fp);
-    
+
     Grammar *G = malloc(sizeof(Grammar));
     if (!G) {
-        perror("malloc Grammar");
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "Memory allocation failed for Grammar\n");
+        freeRules(rules, count);
+        return NULL;
     }
     G->rules = rules;
     G->numRules = count;
 
     G->startSymbol = strdup("program");
+    if (!G->startSymbol) {
+        fprintf(stderr, "Memory allocation failed for start symbol\n");
+        freeGrammar(G);
+        return NULL;
+    }
+
     return G;
 }
 
+// Function to free grammar rules
+void freeRules(GrammarRule **rules, int count) {
+    for (int i = 0; i < count; i++) {
+        GrammarRule *rule = rules[i];
+        free(rule->lhs);
+        for (int j = 0; j < rule->rhsCount; j++) {
+            free(rule->rhs[j]);
+        }
+        free(rule->rhs);
+        free(rule);
+    }
+    free(rules);
+}
 
+// Function to free grammar
+void freeGrammar(Grammar *G) {
+    freeRules(G->rules, G->numRules);
+    free(G->startSymbol);
+    free(G);
+}
+
+// Function to check if a symbol is in an array
 int containsSymbol(char **arr, int count, const char *symbol) {
     for (int i = 0; i < count; i++) {
         if (strcmp(arr[i], symbol) == 0)
@@ -126,20 +169,21 @@ int containsSymbol(char **arr, int count, const char *symbol) {
     return 0;
 }
 
+// Function to add a symbol to an array
 bool addSymbol(char ***arr, int *count, int *capacity, const char *symbol) {
     if (!containsSymbol(*arr, *count, symbol)) {
         if (*count == *capacity) {
             *capacity *= 2;
             *arr = realloc(*arr, (*capacity) * sizeof(char *));
             if (!*arr) {
-                perror("realloc");
-                exit(EXIT_FAILURE);
+                fprintf(stderr, "Memory reallocation failed\n");
+                return false;
             }
         }
         (*arr)[*count] = strdup(symbol);
         if (!(*arr)[*count]) {
-            perror("strdup");
-            exit(EXIT_FAILURE);
+            fprintf(stderr, "Memory allocation failed for symbol\n");
+            return false;
         }
         (*count)++;
         return true;
@@ -147,7 +191,7 @@ bool addSymbol(char ***arr, int *count, int *capacity, const char *symbol) {
     return false;
 }
 
-
+// Function to get non-terminal index
 int getNonTerminalIndex(const char *nonTerminal) {
     if (strcmp(nonTerminal, "operator") == 0) return NT_OPERATOR;
     if (strcmp(nonTerminal, "program") == 0) return NT_PROGRAM;
@@ -207,6 +251,7 @@ int getNonTerminalIndex(const char *nonTerminal) {
     return -1;
 }
 
+// Function to get terminal index
 int getTerminalIndex(const char *terminal) {
     for (size_t i = 0; i < NUM_TERMINALS; i++) {
         if (strcmp(tokenStrings[i], terminal) == 0)
@@ -214,33 +259,47 @@ int getTerminalIndex(const char *terminal) {
     }
     return -1;
 }
+
+// Function to check if a symbol is a terminal
 int isTerminal(const char *symbol) {
     if (strcmp(symbol, "TK_EPS") == 0) return 0; // Treat TK_EPS as epsilon
     return (strncmp(symbol, "TK_", 3) == 0);
 }
 
+// Function to check if a symbol is a non-terminal
 int isNonTerminal(const char *symbol) {
     if (strcmp(symbol, "TK_EPS") == 0) return 0;
     return (!isTerminal(symbol));
 }
 
-
+// Function to compute FIRST and FOLLOW sets
 FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
     if (DEBUG) printf("\nComputing FIRST & FOLLOW sets for %d non-terminals...\n", numNonTerminals);
 
     FirstFollow *ff = malloc(numNonTerminals * sizeof(FirstFollow));
-    if (!ff) { perror("malloc failed"); exit(EXIT_FAILURE); }
+    if (!ff) { 
+        fprintf(stderr, "Memory allocation failed for FIRST/FOLLOW sets\n");
+        return NULL; 
+    }
 
     for (int i = 0; i < numNonTerminals; i++) {
         ff[i].firstCount = 0;
         ff[i].firstCapacity = INIT_CAPACITY;
         ff[i].first = malloc(ff[i].firstCapacity * sizeof(char *));
-        if (!ff[i].first) { perror("malloc first failed"); exit(EXIT_FAILURE); }
+        if (!ff[i].first) { 
+            fprintf(stderr, "Memory allocation failed for FIRST set\n");
+            freeFirstFollow(ff, i);
+            return NULL; 
+        }
 
         ff[i].followCount = 0;
         ff[i].followCapacity = INIT_CAPACITY;
         ff[i].follow = malloc(ff[i].followCapacity * sizeof(char *));
-        if (!ff[i].follow) { perror("malloc follow failed"); exit(EXIT_FAILURE); }
+        if (!ff[i].follow) { 
+            fprintf(stderr, "Memory allocation failed for FOLLOW set\n");
+            freeFirstFollow(ff, i + 1);
+            return NULL; 
+        }
     }
 
     // Compute FIRST sets
@@ -257,7 +316,6 @@ FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
                 continue;
             }
 
-
             if (rule->rhsCount == 0) {
                 if (addSymbol(&ff[A_index].first, &ff[A_index].firstCount, 
                               &ff[A_index].firstCapacity, "TK_EPS"))
@@ -270,7 +328,6 @@ FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
                 char *X = rule->rhs[j];
 
                 if (!isNonTerminal(X)) {
-                   
                     if (addSymbol(&ff[A_index].first, &ff[A_index].firstCount, 
                                   &ff[A_index].firstCapacity, X))
                         changed = 1;
@@ -283,7 +340,6 @@ FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
                         continue;
                     }
 
-                   
                     for (int k = 0; k < ff[X_index].firstCount; k++) {
                         if (strcmp(ff[X_index].first[k], "TK_EPS") != 0) {
                             if (addSymbol(&ff[A_index].first, &ff[A_index].firstCount, 
@@ -292,7 +348,6 @@ FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
                         }
                     }
 
-                   
                     if (!containsSymbol(ff[X_index].first, ff[X_index].firstCount, "TK_EPS")) {
                         allNullable = 0;
                         break;
@@ -300,7 +355,6 @@ FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
                 }
             }
 
-           
             if (allNullable) {
                 if (addSymbol(&ff[A_index].first, &ff[A_index].firstCount, 
                               &ff[A_index].firstCapacity, "TK_EPS"))
@@ -308,7 +362,6 @@ FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
             }
         }
     }
-
 
     if (DEBUG) printf("\n[Computing FOLLOW Sets...]\n");
 
@@ -364,35 +417,8 @@ FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals) {
                     }
 
                     if (betaNullable || j == rule->rhsCount - 1) {
-                        for (int t = 0; t < ff[A_index].followCount; t++) {
-                            if (addSymbol(&ff[X_index].follow, &ff[X_index].followCount, 
-                                          &ff[X_index].followCapacity, ff[A_index].follow[t]))
-                                changed = 1;
-                        }
-                    }
-                }
-            }
-        }
-    }
+                        for (int t = 0
 
-    if (DEBUG) {
-        printf("\n[FINAL FIRST & FOLLOW SETS]\n");
-        for (int i = 0; i < numNonTerminals; i++) {
-            printf("FIRST(%s) = { ", G->rules[i]->lhs);
-            for (int j = 0; j < ff[i].firstCount; j++) {
-                printf("%s ", ff[i].first[j]);
-            }
-            printf("}\n");
-
-            printf("FOLLOW(%s) = { ", G->rules[i]->lhs);
-            for (int j = 0; j < ff[i].followCount; j++) {
-                printf("%s ", ff[i].follow[j]);
-            }
-            printf("}\n");
-        }
-    }
-    return ff;
-}
 
 
 void createParseTable(FirstFollow *ffArr, int numNonTerminals, Grammar *G, int table[TOTAL_NON_TERMINALS][NUM_TERMINALS]) {
