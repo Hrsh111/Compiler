@@ -8,7 +8,7 @@
 #define BUFFER_SIZE 4096
 #define N_TC 54
 #define TC 59
-#define KC 28
+#define KC 29
 #define HASH_TABLE_SIZE (1<<20)
 
 typedef enum {

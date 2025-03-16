@@ -5,9 +5,9 @@
 #include "lexerDef.h"   // Contains tokenInfo, TwinBuffer, tokenStrings, etc.
 #include "lexer.h"      // Contains initialise(), getNextToken(), etc.
 
-// Extern declarations (adjust as needed)
+// Extern declarations – ensure these match your definitions
 extern TwinBuffer twinBuffer;
-//extern char *tokenStrings[];
+extern const char *tokenStrings[];
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -28,12 +28,15 @@ int main(int argc, char *argv[]) {
     clock_t startLexer = clock();
     tokenInfo token;
     
+    // Continuously get tokens until END_OF_INPUT is reached.
     do {
         token = getNextToken(&twinBuffer);
+        // If a token indicates an error, print an error message in the desired format.
         if (token.token == TK_ERROR) {
-            fprintf(stderr, "Lexical error at line %d: \"%s\"\n", token.lineNumber, token.lexeme);
+            printf("Line no. %-3d\t Lexeme: %-20s\t Error: Unknown symbol or pattern\n", 
+                   token.lineNumber, token.lexeme);
         } else {
-            printf("Line no. %d\tLexeme: \"%s\"\tToken: %s\n",
+            printf("Line no. %-3d\t Lexeme: %-20s\t Token %s\n",
                    token.lineNumber, token.lexeme, tokenStrings[token.token]);
         }
     } while (token.token != END_OF_INPUT);
