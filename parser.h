@@ -7,6 +7,7 @@ void freeParseTree(ParseTreeNode *root);
 int isTerminal(const char *symbol);
 
 typedef enum {
+    NT_OPERATOR,
     NT_PROGRAM,
     NT_MAINFUNCTION,
     NT_OTHERFUNCTIONS,

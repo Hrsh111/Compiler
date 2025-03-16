@@ -283,6 +283,8 @@ void createToken(tokenInfo *tk, terminals tokenType, int line, const char *lexem
 terminals checkKeyword(const char *lexeme) {
     if (strcmp(lexeme, "with") == 0)
         return TK_WITH;
+        if(strcmp(lexeme, "endwhile")==0)
+        return TK_ENDWHILE;
     if (strcmp(lexeme, "parameter") == 0)
         return TK_PARAMETER;
     if (strcmp(lexeme, "parameters") == 0)
@@ -331,64 +333,14 @@ terminals checkKeyword(const char *lexeme) {
         return TK_REAL;          // Return TK_FIELDID for "real"
         if (strcmp(lexeme, "input") == 0)
         return TK_INPUT;   // <-- Added for "input"
+        if(strcmp(lexeme, "int")==0)
+        return TK_INT;
     if (strcmp(lexeme, "output") == 0)
         return TK_OUTPUT;     
     return TK_ERROR;
 }
 
 
-/*terminals getKeywordToken(const char *lexeme) {
-    if (strcmp(lexeme, "with") == 0)
-        return TK_WITH;
-    if (strcmp(lexeme, "parameters") == 0)
-        return TK_PARAMETERS;
-    if (strcmp(lexeme, "end") == 0)
-        return TK_END;
-    if (strcmp(lexeme, "while") == 0)
-        return TK_WHILE;
-    if (strcmp(lexeme, "union") == 0)
-        return TK_UNION;
-    if (strcmp(lexeme, "definetype") == 0)
-        return TK_DEFINETYPE;
-    if (strcmp(lexeme, "as") == 0)
-        return TK_AS;
-    if (strcmp(lexeme, "type") == 0)
-        return TK_TYPE;
-    if (strcmp(lexeme, "_main") == 0)
-        return TK_MAIN;
-    if (strcmp(lexeme, "endunion") == 0)
-        return TK_ENDUNION;
-    if (strcmp(lexeme, "global") == 0)
-        return TK_GLOBAL;
-    if (strcmp(lexeme, "if") == 0)
-        return TK_IF;
-    if (strcmp(lexeme, "list") == 0)
-        return TK_LIST;
-    if (strcmp(lexeme, "then") == 0)
-        return TK_THEN;
-    if (strcmp(lexeme, "endif") == 0)
-        return TK_ENDIF;
-    if (strcmp(lexeme, "read") == 0)
-        return TK_READ;
-    if (strcmp(lexeme, "write") == 0)
-        return TK_WRITE;
-    if (strcmp(lexeme, "return") == 0)
-        return TK_RETURN;
-    if (strcmp(lexeme, "record") == 0)
-        return TK_RECORD;
-    if (strcmp(lexeme, "endrecord") == 0)
-        return TK_ENDRECORD;
-    if (strcmp(lexeme, "else") == 0)
-        return TK_ELSE;
-    if (strcmp(lexeme, "call") == 0)
-        return TK_CALL;
-    return TK_ERROR;
-}*/
-
-/* getNextToken: DFA implementation using fetchNextChar exclusively.
-   Note: This is a direct adaptation of your earlier state-machine.
-   All calls to incrementForward(B) have been removed since fetchNextChar()
-   now handles pointer advancement and buffer switching. */
 
 
    tokenInfo getNextToken(TwinBuffer *B) {
@@ -404,8 +356,6 @@ terminals checkKeyword(const char *lexeme) {
             case -1:
                 // Error state: report error, skip the offending character, and return error token.
                 createToken(&t, TK_ERROR, lineCount, lexeme);
-                // Advance one character to avoid reprocessing the same error character.
-                //forward++;
                 setBeginToForward(B);
                 return t;
 
@@ -415,7 +365,7 @@ terminals checkKeyword(const char *lexeme) {
                     createToken(&t, END_OF_INPUT, lineCount, "EOF");
                     setBeginToForward(B);
                     return t;
-               }
+                }
                 lexeme[counter++] = c;
                 if (c == '%')
                     state = 1;
@@ -456,7 +406,7 @@ terminals checkKeyword(const char *lexeme) {
                 else if (c == '>')
                     state = 24;
                 else if (c == '<')
-                    state = 27;
+                    state = 27;  // New consolidated handling for '<'
                 else if (c == '#')
                     state = 33;
                 else if (c == '=')
@@ -465,16 +415,15 @@ terminals checkKeyword(const char *lexeme) {
                     state = 38;
                 else if (c == 'b' || c == 'c' || c == 'd')
                     state = 48;
-               else if (c >= 'a' && c <= 'z')
-    state = 54;
-
+                else if (c >= 'a' && c <= 'z')
+                    state = 54;
                 else if (c == '_')
                     state = 56;
                 else
                     state = -1;
                 break;
 
-            // Comment: create TK_COMMENT and skip the rest of the line.
+            // Case 1: Comment: return TK_COMMENT and ignore rest of line.
             case 1:
                 createToken(&t, TK_COMMENT, lineCount, lexeme);
                 ignoreComment(B);
@@ -534,7 +483,6 @@ terminals checkKeyword(const char *lexeme) {
                 createToken(&t, TK_NOT, lineCount, lexeme);
                 setBeginToForward(B);
                 return t;
-
             // Two-character token: "!="
             case 15:
                 c = fetchNextChar();
@@ -546,68 +494,41 @@ terminals checkKeyword(const char *lexeme) {
                     createToken(&t, TK_ERROR, lineCount, lexeme);
                 }
                 return t;
-// Logical AND: expecting exactly three '&' characters.
-// Logical AND / Ampersand handling:
-case 17: {
-    // We have already read the first '&' in state 0 and stored it in lexeme.
-    c = fetchNextChar();
-    if (c == '&') {
-         lexeme[counter++] = c;  // now lexeme contains "&&"
-         state = 18;             // move to state 18 to look for a third '&'
-    } else {
-         // Single '&' is not valid; retract and report error.
-         retract();
-         lexeme[counter] = '\0';
-         createToken(&t, TK_ERROR, lineCount, lexeme);  // Error: Unknown symbol pattern "<&>"
-         setBeginToForward(B);
-         return t;
-    }
-    break;
-}
-case 18: {
-    c = fetchNextChar();
-    if (c == '&') {
-         lexeme[counter++] = c;  // now lexeme contains "&&&"
-         // Lookahead: if needed, you can check the next character (and then retract)
-         // For our purposes, we finalize TK_AND here.
-         lexeme[counter] = '\0';
-         createToken(&t, TK_AND, lineCount, lexeme);
-         setBeginToForward(B);
-         return t;
-    } else {
-         // Exactly two '&' encountered: error.
-         retract();  // Retract the non-'&' character.
-         lexeme[counter] = '\0';
-         createToken(&t, TK_ERROR, lineCount, lexeme);  // Error: Unknown pattern "<&&>"
-         setBeginToForward(B);
-         return t;
-    }
-    break;
-}
 
-case 19: {
-    // Now attempt to read a third '&'
-    c = fetchNextChar();
-    if (c == '&') {
-         lexeme[counter++] = c;
-         lexeme[counter] = '\0';
-         // Valid logical AND pattern "&&&"
-         createToken(&t, TK_AND, lineCount, lexeme);
-         setBeginToForward(B);
-         return t;
-    } else {
-         // Not exactly three: this is an error for the pattern read.
-         // Retract the character that does not belong.
-         retract();
-         lexeme[counter] = '\0';
-         createToken(&t, TK_ERROR, lineCount, lexeme); // Error: Unknown pattern <&&>
-         setBeginToForward(B);
-         return t;
-    }
-}
+            // Logical AND handling: expecting exactly three '&'
+            case 17: {
+                c = fetchNextChar();
+                if (c == '&') {
+                     lexeme[counter++] = c;
+                     state = 18;
+                } else {
+                     retract();
+                     lexeme[counter] = '\0';
+                     createToken(&t, TK_ERROR, lineCount, lexeme);
+                     setBeginToForward(B);
+                     return t;
+                }
+                break;
+            }
+            case 18: {
+                c = fetchNextChar();
+                if (c == '&') {
+                     lexeme[counter++] = c;
+                     lexeme[counter] = '\0';
+                     createToken(&t, TK_AND, lineCount, lexeme);
+                     setBeginToForward(B);
+                     return t;
+                } else {
+                     retract();
+                     lexeme[counter] = '\0';
+                     createToken(&t, TK_ERROR, lineCount, lexeme);
+                     setBeginToForward(B);
+                     return t;
+                }
+                break;
+            }
 
-
-            // Logical OR: @@@
+            // Logical OR: expecting exactly three '@'
             case 20:
                 c = fetchNextChar();
                 lexeme[counter++] = c;
@@ -629,17 +550,15 @@ case 19: {
                 setBeginToForward(B);
                 return t;
 
-                case 23:
+            case 23:
                 if (c == '\n') {
-                    lineCount++;  // Count the newline.
+                    lineCount++;
                 }
-                // Reset lexeme and continue scanning.
                 setBeginToForward(B);
                 counter = 0;
                 memset(lexeme, 0, sizeof(lexeme));
                 state = 0;
                 break;
-            
 
             // Greater-than tokens (">" or ">=")
             case 24:
@@ -661,66 +580,46 @@ case 19: {
                 setBeginToForward(B);
                 return t;
 
-            // Less-than tokens ("<", "<=", "<-")
+            // Less-than tokens: now consolidated assignment operator handling in state 27.
             case 27:
-            c = fetchNextChar();
-            if (c == '=')
-            {
-                lexeme[counter++] = c;
-                state = 28;
-            }
-            else if (c == '-')
-            {
-                lexeme[counter++] = c;
-                state = 29;
-            }
-            else
-            {
-                // c is not '=' or '-', so retract this character
-                retract();  
-                state = 32;
-            }
-            break;
-        
-            case 28:
-                createToken(&t, TK_LE, lineCount, lexeme);
-                setBeginToForward(B);
-                return t;
-            case 29:
                 c = fetchNextChar();
-                lexeme[counter++] = c;
-                if (c == '-')
-                    state = 30;
-                else
-                    state = 61;
+                if (c == '=') {
+                    lexeme[counter++] = c;
+                    createToken(&t, TK_LE, lineCount, lexeme);
+                    setBeginToForward(B);
+                    return t;
+                } else if (c == '-') {
+                    lexeme[counter++] = c;
+                    // Expect two more '-' characters for the assignment operator.
+                    c = fetchNextChar();
+                    if (c == '-') {
+                        lexeme[counter++] = c;
+                        c = fetchNextChar();
+                        if (c == '-') {
+                            lexeme[counter++] = c;
+                            createToken(&t, TK_ASSIGNOP, lineCount, lexeme);
+                            setBeginToForward(B);
+                            return t;
+                        } else {
+                            // Pattern "<--" is not valid; retract and signal error.
+                            retract();
+                            state = -1;
+                        }
+                    } else {
+                        // Pattern "<-" is not valid; retract and signal error.
+                        retract();
+                        state = -1;
+                    }
+                } else {
+                    retract();
+                    state = 32;
+                }
                 break;
-            case 30:
-                c = fetchNextChar();
-                lexeme[counter++] = c;
-                if (c == '-')
-                    state = 31;
-                else
-                    state = -1;
-                break;
-            case 31:
-                createToken(&t, TK_ASSIGNOP, lineCount, lexeme);
-                setBeginToForward(B);
-                return t;
-            case 61:
-                lexeme[counter - 1] = '\0';
-                lexeme[counter - 2] = '\0';
-                createToken(&t, TK_LT, lineCount, lexeme);
-                retract();
-                retract();
-                setBeginToForward(B);
-                return t;
-                case 32:
+            case 32:
                 lexeme[counter] = '\0';
                 createToken(&t, TK_LT, lineCount, lexeme);
-                // Do NOT retract here, because we've already retracted in state 27.
                 setBeginToForward(B);
                 return t;
-            
 
             // Reserved word/identifier starting with '#' (RUID)
             case 33:
@@ -761,148 +660,105 @@ case 19: {
                 return t;
 
             // Numeric literals (integers and reals)
-  // State 38: Reading the integer part.
-case 38: {
-    c = fetchNextChar();
-    if (isdigit(c)) {
-         lexeme[counter++] = c;
-         state = 38;
-    } else if (c == '.') {
-         lexeme[counter++] = c;
-         state = 39;  // Transition to reading fractional digits.
-    } else {
-         // End of integer literal.
-         retract();  // Put back the delimiter.
-         lexeme[counter] = '\0';
-         createToken(&t, TK_NUM, lineCount, lexeme);
-         setBeginToForward(B);
-         return t;
-    }
-    break;
-}
-
-// State 39: We have read the dot; now expect the first fractional digit.
-case 39: {
-    c = fetchNextChar();
-    if (isdigit(c)) {
-         lexeme[counter++] = c;
-         state = 40;  // Now expect the second fractional digit.
-    } else {
-         // No digit immediately after dot → error.
-         retract();
-         lexeme[counter] = '\0';
-         createToken(&t, TK_ERROR, lineCount, lexeme);
-         setBeginToForward(B);
-         return t;
-    }
-    break;
-}
-            
-            case 60:
-                lexeme[counter - 1] = '\0';
-                lexeme[counter - 2] = '\0';
-                createToken(&t, TK_NUM, lineCount, lexeme);
-                retract();
-                retract();
-                setBeginToForward(B);
-                return t;
-    // State 40: Expect exactly one more digit for the fractional part.
-case 40: {
-    c = fetchNextChar();
-    if (isdigit(c)) {
-         lexeme[counter++] = c;
-         // Now we have [integer part] '.' [2 fractional digits].
-         // Check if the next character is an exponent marker.
-         char look = fetchNextChar();
-         if (look == 'E' || look == 'e') {
-              lexeme[counter++] = look;  // Append the exponent marker.
-              state = 42;  // Transition to exponent handling.
-         } else {
-              // No exponent: retract the lookahead and finalize TK_RNUM.
-              retract();
-              lexeme[counter] = '\0';
-              createToken(&t, TK_RNUM, lineCount, lexeme);
-              setBeginToForward(B);
-              return t;
-         }
-    } else {
-         // No second fractional digit → error.
-         retract();
-         lexeme[counter] = '\0';
-         createToken(&t, TK_ERROR, lineCount, lexeme);
-         setBeginToForward(B);
-         return t;
-    }
-    break;
-}
+            case 38: {
+                c = fetchNextChar();
+                if (isdigit(c)) {
+                     lexeme[counter++] = c;
+                     state = 38;
+                } else if (c == '.') {
+                     lexeme[counter++] = c;
+                     state = 39;
+                } else {
+                     retract();
+                     lexeme[counter] = '\0';
+                     createToken(&t, TK_NUM, lineCount, lexeme);
+                     setBeginToForward(B);
+                     return t;
+                }
+                break;
+            }
+            case 39: {
+                c = fetchNextChar();
+                if (isdigit(c)) {
+                     lexeme[counter++] = c;
+                     state = 40;
+                } else {
+                     retract();
+                     lexeme[counter] = '\0';
+                     createToken(&t, TK_ERROR, lineCount, lexeme);
+                     setBeginToForward(B);
+                     return t;
+                }
+                break;
+            }
+            case 40: {
+                c = fetchNextChar();
+                if (isdigit(c)) {
+                     lexeme[counter++] = c;
+                     char look = fetchNextChar();
+                     if (look == 'E' || look == 'e') {
+                          lexeme[counter++] = look;
+                          state = 42;
+                     } else {
+                          retract();
+                          lexeme[counter] = '\0';
+                          createToken(&t, TK_RNUM, lineCount, lexeme);
+                          setBeginToForward(B);
+                          return t;
+                     }
+                } else {
+                     retract();
+                     lexeme[counter] = '\0';
+                     createToken(&t, TK_ERROR, lineCount, lexeme);
+                     setBeginToForward(B);
+                     return t;
+                }
+                break;
+            }
             case 41:
                 lexeme[counter - 1] = '\0';
                 createToken(&t, TK_NUM, lineCount, lexeme);
                 retract();
                 setBeginToForward(B);
                 return t;
-
-            
-// State 42: After reading 'E' (or 'e') in the number.
-// State 42: After reading 'E' or 'e' in the number.
-case 42: {
-    c = fetchNextChar();
-    if (c == '+' || c == '-') {
-         lexeme[counter++] = c;
-         state = 43;  // Expect the first exponent digit next.
-    } else if (isdigit(c)) {
-         lexeme[counter++] = c;
-         state = 44;  // We already got the first exponent digit.
-    } else {
-         state = -1;  // Error: Expected a digit or sign after E.
-    }
-    break;
-}
-
-// State 43: After an optional sign, expect the first exponent digit.
-case 43: {
-    c = fetchNextChar();
-    if (isdigit(c)) {
-         lexeme[counter++] = c;
-         state = 44;  // Now expect the second exponent digit.
-    } else {
-         state = -1;  // Error.
-    }
-    break;
-}
-
-// State 44: Expect the second exponent digit.
-case 44: {
-    c = fetchNextChar();
-    if (isdigit(c)) {
-         lexeme[counter++] = c;
-         // Now the exponent part is complete (exactly two digits).
-         // Lookahead: fetch the next character and then retract it.
-         (void)fetchNextChar(); 
-         retract();  
-         lexeme[counter] = '\0';
-         createToken(&t, TK_RNUM, lineCount, lexeme);
-         setBeginToForward(B);
-         return t;
-    } else {
-         state = -1;  // Error.
-    }
-    break;
-}
-
-
-
-/*// State 45: Finalize the real number token.
-case 45: {
-    // We already have exactly two exponent digits.
-    // Retract the character that is not part of the exponent (if any).
-    retract();
-    lexeme[counter] = '\0';
-    createToken(&t, TK_RNUM, lineCount, lexeme);
-    setBeginToForward(B);
-    return t;
-}*/
-
+            case 42: {
+                c = fetchNextChar();
+                if (c == '+' || c == '-') {
+                     lexeme[counter++] = c;
+                     state = 43;
+                } else if (isdigit(c)) {
+                     lexeme[counter++] = c;
+                     state = 44;
+                } else {
+                     state = -1;
+                }
+                break;
+            }
+            case 43: {
+                c = fetchNextChar();
+                if (isdigit(c)) {
+                     lexeme[counter++] = c;
+                     state = 44;
+                } else {
+                     state = -1;
+                }
+                break;
+            }
+            case 44: {
+                c = fetchNextChar();
+                if (isdigit(c)) {
+                     lexeme[counter++] = c;
+                     (void)fetchNextChar(); 
+                     retract();  
+                     lexeme[counter] = '\0';
+                     createToken(&t, TK_RNUM, lineCount, lexeme);
+                     setBeginToForward(B);
+                     return t;
+                } else {
+                     state = -1;
+                }
+                break;
+            }
             case 46:
                 createToken(&t, TK_RNUM, lineCount, lexeme);
                 setBeginToForward(B);
@@ -913,48 +769,45 @@ case 45: {
                 retract();
                 setBeginToForward(B);
                 return t;
-
-            // Identifiers/reserved words starting with b, c, or d
+            
+            // Identifiers/reserved words starting with b, c, or d.
             case 48:
                 c = fetchNextChar();
-                lexeme[counter++] = c;
-                if (islower(c))
+                if (islower(c)) {
+                    lexeme[counter++] = c;
                     state = 49;
-                else if (isdigit(c) && c != '0' && c != '1' && c != '8' && c != '9')
+                } else if (isdigit(c) && c != '0' && c != '1' && c != '8' && c != '9') {
+                    lexeme[counter++] = c;
                     state = 51;
-                else
+                } else {
+                    retract();
                     state = 50;
+                }
                 break;
             case 49:
                 c = fetchNextChar();
-                lexeme[counter++] = c;
-                if (islower(c))
+                if (islower(c)) {
+                    lexeme[counter++] = c;
                     state = 49;
-                else
+                } else {
+                    retract();
                     state = 50;
+                }
                 break;
-                case 50:
-                // Terminate the lexeme without subtracting one.
+            case 50:
                 lexeme[counter] = '\0';
                 if (strlen(lexeme) > 20) {
-                     createToken(&t, TK_ERROR, lineCount,
-                        "Error: Variable Identifier is longer than the prescribed length of 20 characters.");
-                     setBeginToForward(B);
-                     return t;
+                    createToken(&t, TK_ERROR, lineCount,
+                        "Error: Variable Identifier too long.");
+                    setBeginToForward(B);
+                    return t;
                 }
-                // Then check if it's a keyword; if not, create TK_ID.
                 if (checkKeyword(lexeme) != TK_ERROR)
-                     createToken(&t, checkKeyword(lexeme), lineCount, lexeme);
+                    createToken(&t, checkKeyword(lexeme), lineCount, lexeme);
                 else
-                     createToken(&t, TK_ID, lineCount, lexeme);
-                retract();
+                    createToken(&t, TK_ID, lineCount, lexeme);
                 setBeginToForward(B);
                 return t;
-            
-            
-            
-            
-            
             case 51:
                 c = fetchNextChar();
                 lexeme[counter++] = c;
@@ -965,9 +818,8 @@ case 45: {
                 else
                     state = 52;
                 break;
-                case 52:
+            case 52:
                 lexeme[counter - 1] = '\0';
-
                 if (strlen(lexeme) > 20) {
                      createToken(&t, TK_ERROR, lineCount,
                         "Error: Variable Identifier is longer than the prescribed length of 20 characters.");
@@ -978,7 +830,6 @@ case 45: {
                 retract();
                 setBeginToForward(B);
                 return t;
-            
             case 53:
                 c = fetchNextChar();
                 lexeme[counter++] = c;
@@ -987,67 +838,43 @@ case 45: {
                 else
                     state = 52;
                 break;
-
-case 54: {
-    c = fetchNextChar();
-    if (c >= 'a' && c <= 'z') {
-         lexeme[counter++] = c;
-         state = 54;
-    } else {
-
-         retract();
-         state = 55;
-    }
-    break;
-}
-
-
-
+            case 54: {
+                c = fetchNextChar();
+                if (c >= 'a' && c <= 'z') {
+                     lexeme[counter++] = c;
+                     state = 54;
+                } else {
+                     retract();
+                     state = 55;
+                }
+                break;
+            }
             case 55: {
-                lexeme[counter] = '\0';  // Terminate the lexeme.
-                // If the lexeme ends with a closing parenthesis, remove it
-                // so that the identifier is only the part before the ')'.
-                if (counter > 0 && lexeme[counter - 1] == ')') {
-                    // Save the new length after removal.
+                lexeme[counter] = '\0';
+                while (counter > 0 && isspace((unsigned char)lexeme[counter - 1])) {
                     counter--;
                     lexeme[counter] = '\0';
-                    // Retract one character so that the ')' is processed separately.
+                }
+                if (counter > 0 && lexeme[counter - 1] == ')') {
+                    counter--;
+                    lexeme[counter] = '\0';
                     retract();
                 }
-                // Check if the identifier exceeds the allowed length.
                 if (strlen(lexeme) > 20) {
-                    createToken(&t, TK_ERROR, lineCount,
+                     createToken(&t, TK_ERROR, lineCount,
                         "Error: Variable Identifier is longer than the prescribed length of 20 characters.");
-                    setBeginToForward(B);
-                    return t;
+                     setBeginToForward(B);
+                     return t;
                 }
-                // Check if the lexeme is a keyword; if so, use its token,
-                // otherwise, use TK_ID.
                 terminals maybeKeyword = checkKeyword(lexeme);
                 if (maybeKeyword != TK_ERROR)
-                    createToken(&t, maybeKeyword, lineCount, lexeme);
+                     createToken(&t, maybeKeyword, lineCount, lexeme);
                 else
-                    createToken(&t, TK_ID, lineCount, lexeme);
+                     createToken(&t, TK_ID, lineCount, lexeme);
                 setBeginToForward(B);
                 return t;
             }
-
-
-
-
-
-
-            
-            
-            
-            
-            
-            
-            
-            
-            
-
-            // Function identifiers: start with an underscore
+            // Function identifiers: start with an underscore.
             case 56:
                 c = fetchNextChar();
                 lexeme[counter++] = c;

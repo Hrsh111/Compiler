@@ -1,85 +1,114 @@
 program otherFunctions mainFunction
 mainFunction TK_MAIN stmts TK_END
 otherFunctions function otherFunctions
-otherFunctions TK_EPS
+otherFunctions ε
 function TK_FUNID input_par output_par TK_SEM stmts TK_END
 input_par TK_INPUT TK_PARAMETER TK_LIST TK_SQL parameter_list TK_SQR
 output_par TK_OUTPUT TK_PARAMETER TK_LIST TK_SQL parameter_list TK_SQR
-output_par TK_EPS
+output_par ε
 parameter_list dataType TK_ID remaining_list
+remaining_list TK_COMMA parameter_list
+remaining_list ε
+
 dataType primitiveDatatype
 dataType constructedDatatype
-dataType TK_ID
+
 primitiveDatatype TK_INT
 primitiveDatatype TK_REAL
 constructedDatatype TK_RECORD TK_RUID
 constructedDatatype TK_UNION TK_RUID
-remaining_list TK_COMMA parameter_list
-remaining_list TK_EPS
 stmts typeDefinitions declarations otherStmts returnStmt
-typeDefinitions typeDefinition typeDefinitions
-typeDefinitions TK_EPS
-typeDefinition TK_RECORD TK_RUID fieldDefinitions TK_ENDRECORD TK_SEM
+stmts ε
+
+typeDefinition TK_RECORD TK_RUID fieldDefinitions TK_ENDRECORD
 typeDefinition TK_UNION TK_RUID fieldDefinitions TK_ENDUNION
-fieldDefinitions fieldDefinition fieldDefinition moreFields
-fieldDefinition TK_TYPE primitiveDatatype TK_COLON TK_FIELDID TK_SEM
+typeDefinitions typeDefinition typeDefinitions
+typeDefinitions ε
+
+
+fieldDefinitions fieldDefinition moreFields
+fieldDefinition TK_TYPE primitiveDatatype TK_COLON TK_ID TK_SEM
 moreFields fieldDefinition moreFields
-moreFields TK_EPS
+moreFields ε
 declarations declaration declarations
-declarations TK_EPS
-declaration TK_TYPE dataType TK_COLON TK_ID global_or_not TK_SEM
-global_or_not TK_COLON TK_GLOBAL
-global_or_not TK_EPS
+declarations ε
+
+declaration TK_TYPE dataType TK_COLON TK_ID TK_SEM
+
+
+global_or_not TK_GLOBAL
+global_or_not ε
+
 otherStmts stmt otherStmts
-otherStmts TK_EPS
+otherStmts TK_SEM otherStmts
+otherStmts ε
+
+
 stmt assignmentStmt
 stmt iterativeStmt
 stmt conditionalStmt
 stmt ioStmt
 stmt funCallStmt
+
 assignmentStmt singleOrRecId TK_ASSIGNOP arithmeticExpression TK_SEM
 singleOrRecId TK_ID option_single_constructed
-option_single_constructed TK_DOT TK_FIELDID
-option_single_constructed TK_EPS
-funCallStmt outputParameters TK_CALL TK_FUNID TK_WITH TK_PARAMETERS inputParameters TK_SEM
+
+option_single_constructed TK_DOT TK_ID
+option_single_constructed ε
+
+funCallStmt outputParameters TK_CALL TK_FUNID TK_WITH TK_PARAMETERS inputParameters
+
 outputParameters TK_SQL idList TK_SQR TK_ASSIGNOP
-outputParameters TK_EPS
+outputParameters ε
 inputParameters TK_SQL idList TK_SQR
 iterativeStmt TK_WHILE TK_OP booleanExpression TK_CL stmt otherStmts TK_ENDWHILE
 conditionalStmt TK_IF booleanExpression TK_THEN stmt otherStmts elsePart
 elsePart TK_ELSE stmt otherStmts TK_ENDIF
 elsePart TK_ENDIF
+
 ioStmt TK_READ TK_OP var TK_CL TK_SEM
 ioStmt TK_WRITE TK_OP var TK_CL TK_SEM
+
 arithmeticExpression term expPrime
+
 expPrime operator term expPrime
-expPrime TK_EPS
+expPrime ε
+
+operator TK_PLUS
+operator TK_MINUS
+operator TK_MUL
+operator TK_DIV
+
 term TK_OP arithmeticExpression TK_CL
 term var
-operator TK_PLUS
-operator TK_MUL
-operator TK_MINUS
-operator TK_DIV
+
+var : singleOrRecId
+var : TK_NUM
+var : TK_RNUM
+
+
 booleanExpression TK_OP booleanExpression TK_CL logicalOp TK_OP booleanExpression TK_CL
 booleanExpression var relationalOp var
-booleanExpression TK_NOT TK_OP booleanExpression TK_CL
-var TK_ID
-var TK_NUM
-var TK_RNUM
+booleanExpression TK_NOT booleanExpression
+
 logicalOp TK_AND
 logicalOp TK_OR
+
 relationalOp TK_LT
 relationalOp TK_LE
 relationalOp TK_EQ
 relationalOp TK_GT
 relationalOp TK_GE
 relationalOp TK_NE
+
 returnStmt TK_RETURN optionalReturn TK_SEM
 optionalReturn TK_SQL idList TK_SQR
-optionalReturn TK_EPS
+optionalReturn ε
+
 idList TK_ID more_ids
 more_ids TK_COMMA idList
-more_ids TK_EPS
+more_ids ε
+
 definetypestmt TK_DEFINETYPE A TK_RUID TK_AS TK_RUID
 A TK_RECORD
 A TK_UNION
