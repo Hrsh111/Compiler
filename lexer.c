@@ -709,41 +709,42 @@ terminals getKeywordToken(const char *lexeme) {
                 return t;
 
             // Numeric literals (integers and reals)
-            case 38: {
-                c = fetchNextChar();
-                if (isdigit(c)) {
-                     lexeme[counter++] = c;
-                     state = 38;
-                } else if (c == '.') {
-                     lexeme[counter++] = c;  // add the first dot
-                     state = 39;
-                } else {
-                     // End of integer token.
-                     retract();
-                     lexeme[counter] = '\0';
-                     createToken(&t, TK_NUM, lineCount, lexeme);
-                     setBeginToForward(B);
-                     return t;
-                }
-                break;
-            }
-            
-            // State 39: Expecting at least one digit after the dot.
-            case 39: {
-                c = fetchNextChar();
-                if (isdigit(c)) {
-                     lexeme[counter++] = c;
-                     state = 40;  // Now in fractional part.
-                } else {
-                     // No digit after dot: error.
-                     retract(); // put back non-digit
-                     lexeme[counter] = '\0';
-                     createToken(&t, TK_ERROR, lineCount, lexeme);
-                     setBeginToForward(B);
-                     return t;
-                }
-                break;
-            }
+  // State 38: Reading the integer part.
+case 38: {
+    c = fetchNextChar();
+    if (isdigit(c)) {
+         lexeme[counter++] = c;
+         state = 38;
+    } else if (c == '.') {
+         lexeme[counter++] = c;
+         state = 39;  // Transition to reading fractional digits.
+    } else {
+         // End of integer literal.
+         retract();  // Put back the delimiter.
+         lexeme[counter] = '\0';
+         createToken(&t, TK_NUM, lineCount, lexeme);
+         setBeginToForward(B);
+         return t;
+    }
+    break;
+}
+
+// State 39: We have read the dot; now expect the first fractional digit.
+case 39: {
+    c = fetchNextChar();
+    if (isdigit(c)) {
+         lexeme[counter++] = c;
+         state = 40;  // Now expect the second fractional digit.
+    } else {
+         // No digit immediately after dot → error.
+         retract();
+         lexeme[counter] = '\0';
+         createToken(&t, TK_ERROR, lineCount, lexeme);
+         setBeginToForward(B);
+         return t;
+    }
+    break;
+}
             
             case 60:
                 lexeme[counter - 1] = '\0';
@@ -753,33 +754,35 @@ terminals getKeywordToken(const char *lexeme) {
                 retract();
                 setBeginToForward(B);
                 return t;
-                case 40: {
-                    c = fetchNextChar();
-                    if (isdigit(c)) {
-                         lexeme[counter++] = c;
-                         state = 40;
-                    } else if (c == '.') {
-                         // Second dot encountered – error.
-                         // Retract the dot so it remains for the next token.
-                         retract();
-                         lexeme[counter] = '\0';  // Finalize the number so far, e.g. "123.5"
-                         createToken(&t, TK_ERROR, lineCount, lexeme);
-                         setBeginToForward(B);
-                         return t;
-                    } else if (c == 'E' || c == 'e') {
-                         // Transition to exponent handling (not shown here)
-                         lexeme[counter++] = c;
-                         state = 42;
-                    } else {
-                         // End of fractional number.
-                         retract();
-                         lexeme[counter] = '\0';
-                         createToken(&t, TK_RNUM, lineCount, lexeme);
-                         setBeginToForward(B);
-                         return t;
-                    }
-                    break;
-                }
+    // State 40: Expect exactly one more digit for the fractional part.
+case 40: {
+    c = fetchNextChar();
+    if (isdigit(c)) {
+         lexeme[counter++] = c;
+         // Now we have [integer part] '.' [2 fractional digits].
+         // Check if the next character is an exponent marker.
+         char look = fetchNextChar();
+         if (look == 'E' || look == 'e') {
+              lexeme[counter++] = look;  // Append the exponent marker.
+              state = 42;  // Transition to exponent handling.
+         } else {
+              // No exponent: retract the lookahead and finalize TK_RNUM.
+              retract();
+              lexeme[counter] = '\0';
+              createToken(&t, TK_RNUM, lineCount, lexeme);
+              setBeginToForward(B);
+              return t;
+         }
+    } else {
+         // No second fractional digit → error.
+         retract();
+         lexeme[counter] = '\0';
+         createToken(&t, TK_ERROR, lineCount, lexeme);
+         setBeginToForward(B);
+         return t;
+    }
+    break;
+}
             case 41:
                 lexeme[counter - 1] = '\0';
                 createToken(&t, TK_NUM, lineCount, lexeme);
@@ -795,21 +798,21 @@ case 42: {
          lexeme[counter++] = c;
          state = 43;  // Now expect the first exponent digit.
     } else if (isdigit(c)) {
+         // No sign present; treat this digit as the first exponent digit.
          lexeme[counter++] = c;
-         state = 44;  // We already got the first exponent digit.
+         state = 44;
     } else {
-         state = -1;  // Error: Expected a digit or sign after E.
+         state = -1;  // Error.
     }
     break;
 }
-// State 43: After reading an optional sign, expect the first exponent digit.
 case 43: {
     c = fetchNextChar();
     if (isdigit(c)) {
          lexeme[counter++] = c;
-         state = 44;  // Now move to the state expecting the second exponent digit.
+         state = 44;  // Now expect the second exponent digit.
     } else {
-         state = -1;  // Error: Expected a digit.
+         state = -1;  // Error.
     }
     break;
 }
@@ -818,13 +821,16 @@ case 44: {
     c = fetchNextChar();
     if (isdigit(c)) {
          lexeme[counter++] = c;
-         // Finalize the token here—exactly two exponent digits have been consumed.
+         // Now the exponent part is complete (exactly two digits).
+         // Lookahead: fetch the next character (if any) and then retract it.
+         char look = fetchNextChar();
+         retract();  
          lexeme[counter] = '\0';
          createToken(&t, TK_RNUM, lineCount, lexeme);
          setBeginToForward(B);
          return t;
     } else {
-         state = -1;  // Error: Expected second exponent digit.
+         state = -1;  // Error.
     }
     break;
 }
