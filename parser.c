@@ -637,8 +637,8 @@ void printNodeInfo(ParseTreeNode *node, FILE *fp, int nodeCounter) {
             lexemeStr, currNodeNum, lineNo, tokenNameStr, valueStr, parentStr, isLeafStr, nodeSymbolStr);
 }
 
-void printParseTree(ParseTree *PT, char *outfile) {
-    if (PT == NULL || PT->root == NULL) {
+void printParseTree(ParseTreeNode *root, char *outfile) {
+    if (root == NULL) {
         fprintf(stderr, "Parse Tree is empty.\n");
         return;
     }
@@ -651,6 +651,6 @@ void printParseTree(ParseTree *PT, char *outfile) {
             "Lexeme", "Node#", "Lineno", "TokenName", "Value", "Parent", "Leaf", "NodeSymbol");
     fprintf(fp, "-----------------------------------\n");
     int nodeCounter = 0;
-    printParseTreeHelper(PT->root, fp, &nodeCounter);
+    printParseTreeHelper(root, fp, &nodeCounter);
     fclose(fp);
 }
