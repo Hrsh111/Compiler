@@ -394,7 +394,7 @@ terminals getKeywordToken(const char *lexeme) {
                 // Error state: report error, skip the offending character, and return error token.
                 createToken(&t, TK_ERROR, lineCount, lexeme);
                 // Advance one character to avoid reprocessing the same error character.
-                forward++;
+                //forward++;
                 setBeginToForward(B);
                 return t;
 
@@ -530,28 +530,66 @@ terminals getKeywordToken(const char *lexeme) {
                     createToken(&t, TK_ERROR, lineCount, lexeme);
                 }
                 return t;
+// Logical AND: expecting exactly three '&' characters.
+// Logical AND / Ampersand handling:
+case 17: {
+    // We have already read the first '&' in state 0 and stored it in lexeme.
+    c = fetchNextChar();
+    if (c == '&') {
+         lexeme[counter++] = c;  // now lexeme contains "&&"
+         state = 18;             // move to state 18 to look for a third '&'
+    } else {
+         // Single '&' is not valid; retract and report error.
+         retract();
+         lexeme[counter] = '\0';
+         createToken(&t, TK_ERROR, lineCount, lexeme);  // Error: Unknown symbol pattern "<&>"
+         setBeginToForward(B);
+         return t;
+    }
+    break;
+}
+case 18: {
+    c = fetchNextChar();
+    if (c == '&') {
+         lexeme[counter++] = c;  // now lexeme contains "&&&"
+         // Lookahead: if needed, you can check the next character (and then retract)
+         // For our purposes, we finalize TK_AND here.
+         lexeme[counter] = '\0';
+         createToken(&t, TK_AND, lineCount, lexeme);
+         setBeginToForward(B);
+         return t;
+    } else {
+         // Exactly two '&' encountered: error.
+         retract();  // Retract the non-'&' character.
+         lexeme[counter] = '\0';
+         createToken(&t, TK_ERROR, lineCount, lexeme);  // Error: Unknown pattern "<&&>"
+         setBeginToForward(B);
+         return t;
+    }
+    break;
+}
 
-            // Logical AND: &&&
-            case 17:
-                c = fetchNextChar();
-                lexeme[counter++] = c;
-                if (c == '&')
-                    state = 18;
-                else
-                    state = -1;
-                break;
-            case 18:
-                c = fetchNextChar();
-                lexeme[counter++] = c;
-                if (c == '&')
-                    state = 19;
-                else
-                    state = -1;
-                break;
-            case 19:
-                createToken(&t, TK_AND, lineCount, lexeme);
-                setBeginToForward(B);
-                return t;
+case 19: {
+    // Now attempt to read a third '&'
+    c = fetchNextChar();
+    if (c == '&') {
+         lexeme[counter++] = c;
+         lexeme[counter] = '\0';
+         // Valid logical AND pattern "&&&"
+         createToken(&t, TK_AND, lineCount, lexeme);
+         setBeginToForward(B);
+         return t;
+    } else {
+         // Not exactly three: this is an error for the pattern read.
+         // Retract the character that does not belong.
+         retract();
+         lexeme[counter] = '\0';
+         createToken(&t, TK_ERROR, lineCount, lexeme); // Error: Unknown pattern <&&>
+         setBeginToForward(B);
+         return t;
+    }
+}
+
 
             // Logical OR: @@@
             case 20:
@@ -575,19 +613,17 @@ terminals getKeywordToken(const char *lexeme) {
                 setBeginToForward(B);
                 return t;
 
-            // Whitespace/EOF handling
-            case 23:
-                if (lexeme[0] == '\0' || c == EOF) {
-                    createToken(&t, END_OF_INPUT, lineCount, "EOF");
-                    return t;
-                } else if (c == '\n') {
-                    lineCount++;
+                case 23:
+                if (c == '\n') {
+                    lineCount++;  // Count the newline.
                 }
+                // Reset lexeme and continue scanning.
                 setBeginToForward(B);
                 counter = 0;
                 memset(lexeme, 0, sizeof(lexeme));
                 state = 0;
                 break;
+            
 
             // Greater-than tokens (">" or ">=")
             case 24:
