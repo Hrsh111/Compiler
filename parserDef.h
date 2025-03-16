@@ -16,15 +16,15 @@ typedef struct {
 typedef struct GrammarRule {
     char *lhs;      
     char **rhs;     
-    int rhsSize;    
+    int rhsCount;   // Note: use rhsCount consistently!
 } GrammarRule;
 
-
 typedef struct Grammar {
-    GrammarRule *rules;
+    GrammarRule **rules; // Array of pointers to GrammarRule.
     int numRules;
-    char *startSymbol;   
+    char *startSymbol;
 } Grammar;
+
 
 
 typedef struct ParseTableEntry {

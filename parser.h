@@ -3,7 +3,8 @@
 
 #include "parserDef.h"
 #define NUM_TERMINALS (sizeof(tokenStrings)/sizeof(tokenStrings[0]))
-
+void freeParseTree(ParseTreeNode *root);
+int isTerminal(const char *symbol);
 
 typedef enum {
     NT_PROGRAM,
@@ -68,19 +69,22 @@ typedef enum {
 extern GrammarRule grammarRules[];
 extern int numGrammarRules;
 
+Grammar* loadGrammar(const char *filename);
 
 
 FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals);
 
 
-void createParseTable(FirstFollow *ffArr, int numNonTerminals, int table[TOTAL_NON_TERMINALS][NUM_TERMINALS]);
+void createParseTable(FirstFollow *ffArr, int numNonTerminals, Grammar *G, int table[TOTAL_NON_TERMINALS][NUM_TERMINALS]);
+ParseTreeNode* parseInputSourceCode(char *testcaseFile, int parseTable[TOTAL_NON_TERMINALS][NUM_TERMINALS], Grammar *G);
 
 
-
-ParseTreeNode* parseInputSourceCode(char *testcaseFile, int parseTable[TOTAL_NON_TERMINALS][NUM_TERMINALS]);
 
 
 void printParseTree(ParseTree *PT, char *outfile);
+// In parser.h, add these lines (for example, after the declaration of getNonTerminalIndex):
+int getTerminalIndex(const char *terminal);
+int isTerminal(const char *symbol);
 
 
 

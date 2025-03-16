@@ -283,6 +283,8 @@ void createToken(tokenInfo *tk, terminals tokenType, int line, const char *lexem
 terminals checkKeyword(const char *lexeme) {
     if (strcmp(lexeme, "with") == 0)
         return TK_WITH;
+    if (strcmp(lexeme, "parameter") == 0)
+        return TK_PARAMETER;
     if (strcmp(lexeme, "parameters") == 0)
         return TK_PARAMETERS;
     if (strcmp(lexeme, "end") == 0)
@@ -327,11 +329,15 @@ terminals checkKeyword(const char *lexeme) {
         return TK_CALL;
     if (strcmp(lexeme, "real") == 0)  // Add this line
         return TK_REAL;          // Return TK_FIELDID for "real"
+        if (strcmp(lexeme, "input") == 0)
+        return TK_INPUT;   // <-- Added for "input"
+    if (strcmp(lexeme, "output") == 0)
+        return TK_OUTPUT;     
     return TK_ERROR;
 }
 
 
-terminals getKeywordToken(const char *lexeme) {
+/*terminals getKeywordToken(const char *lexeme) {
     if (strcmp(lexeme, "with") == 0)
         return TK_WITH;
     if (strcmp(lexeme, "parameters") == 0)
@@ -377,12 +383,14 @@ terminals getKeywordToken(const char *lexeme) {
     if (strcmp(lexeme, "call") == 0)
         return TK_CALL;
     return TK_ERROR;
-}
+}*/
 
 /* getNextToken: DFA implementation using fetchNextChar exclusively.
    Note: This is a direct adaptation of your earlier state-machine.
    All calls to incrementForward(B) have been removed since fetchNextChar()
    now handles pointer advancement and buffer switching. */
+
+
    tokenInfo getNextToken(TwinBuffer *B) {
     tokenInfo t;
     char lexeme[256];
@@ -959,7 +967,7 @@ case 45: {
                 break;
                 case 52:
                 lexeme[counter - 1] = '\0';
-                // Add a length check here using strlen(lexeme)
+
                 if (strlen(lexeme) > 20) {
                      createToken(&t, TK_ERROR, lineCount,
                         "Error: Variable Identifier is longer than the prescribed length of 20 characters.");
@@ -980,38 +988,55 @@ case 45: {
                     state = 52;
                 break;
 
-            // Identifiers/reserved words starting with a lowercase letter (not b, c, or d)
-            case 54: {
-                c = fetchNextChar();
-                if (c >= 'a' && c <= 'z') {  // Only allow a-z
-                     lexeme[counter++] = c;
-                     state = 54;
-                }
-                else {
-                     state = 55;  // Encountered something that doesn't belong in FIELDID
-                }
-                break;
-            }
-            
-        
+case 54: {
+    c = fetchNextChar();
+    if (c >= 'a' && c <= 'z') {
+         lexeme[counter++] = c;
+         state = 54;
+    } else {
+
+         retract();
+         state = 55;
+    }
+    break;
+}
+
+
+
             case 55: {
                 lexeme[counter] = '\0';  // Terminate the lexeme.
-
-                if (strlen(lexeme) > 20) {
-                     createToken(&t, TK_ERROR, lineCount,
-                        "Error: Variable Identifier is longer than the prescribed length of 20 characters.");
-                     setBeginToForward(B);
-                     return t;
+                // If the lexeme ends with a closing parenthesis, remove it
+                // so that the identifier is only the part before the ')'.
+                if (counter > 0 && lexeme[counter - 1] == ')') {
+                    // Save the new length after removal.
+                    counter--;
+                    lexeme[counter] = '\0';
+                    // Retract one character so that the ')' is processed separately.
+                    retract();
                 }
-                retract();  // Put back the non-matching character.
+                // Check if the identifier exceeds the allowed length.
+                if (strlen(lexeme) > 20) {
+                    createToken(&t, TK_ERROR, lineCount,
+                        "Error: Variable Identifier is longer than the prescribed length of 20 characters.");
+                    setBeginToForward(B);
+                    return t;
+                }
+                // Check if the lexeme is a keyword; if so, use its token,
+                // otherwise, use TK_ID.
                 terminals maybeKeyword = checkKeyword(lexeme);
                 if (maybeKeyword != TK_ERROR)
-                     createToken(&t, maybeKeyword, lineCount, lexeme);
+                    createToken(&t, maybeKeyword, lineCount, lexeme);
                 else
-                     createToken(&t, TK_ID, lineCount, lexeme);
+                    createToken(&t, TK_ID, lineCount, lexeme);
                 setBeginToForward(B);
                 return t;
             }
+
+
+
+
+
+
             
             
             
