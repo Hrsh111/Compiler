@@ -79,7 +79,8 @@ FirstFollow* ComputeFirstAndFollowSets(Grammar *G, int numNonTerminals);
 void createParseTable(FirstFollow *ffArr, int numNonTerminals, Grammar *G, int table[TOTAL_NON_TERMINALS][NUM_TERMINALS]);
 ParseTreeNode* parseInputSourceCode(char *testcaseFile, int parseTable[TOTAL_NON_TERMINALS][NUM_TERMINALS], Grammar *G);
 
-
+void printParseTree(ParseTreeNode *PT, char *outfile);
+void printNodeInfo(ParseTreeNode *node, FILE *fp, int nodeCounter) ;
 
 
 void printParseTree(ParseTree *PT, char *outfile);
