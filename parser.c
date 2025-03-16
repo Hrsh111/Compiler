@@ -617,6 +617,7 @@ void printNodeInfo(ParseTreeNode *node, FILE *fp, int nodeCounter) {
 void printParseTreeHelper(ParseTreeNode *node, FILE *fp, int *counter) {
     if (node == NULL)
         return;
+
     if (node->numChildren > 0) {
         int mid = node->numChildren / 2;
         ParseTreeNode **childArray = (ParseTreeNode **)node->children;
@@ -632,6 +633,36 @@ void printParseTreeHelper(ParseTreeNode *node, FILE *fp, int *counter) {
         (*counter)++;
         printNodeInfo(node, fp, *counter);
     }
+}
+
+void printNodeInfo(ParseTreeNode *node, FILE *fp, int nodeCounter) {
+    char lexemeStr[20], tokenNameStr[20], valueStr[20], parentStr[20], isLeafStr[5], nodeSymbolStr[20];
+    if (node->isLeafNode && node->lexeme != NULL)
+        snprintf(lexemeStr, sizeof(lexemeStr), "%s", node->lexeme);
+    else
+        snprintf(lexemeStr, sizeof(lexemeStr), "----");
+    int currNodeNum = nodeCounter;
+    int lineNo = node->lineno;
+    if (node->isLeafNode && node->tokenName != NULL)
+        snprintf(tokenNameStr, sizeof(tokenNameStr), "%s", node->tokenName);
+    else
+        snprintf(tokenNameStr, sizeof(tokenNameStr), "----");
+    if (node->isLeafNode && node->tokenName != NULL &&
+       (strcmp(node->tokenName, "TK_NUM") == 0 || strcmp(node->tokenName, "TK_RNUM") == 0))
+        snprintf(valueStr, sizeof(valueStr), "%.2lf", node->value);
+    else
+        snprintf(valueStr, sizeof(valueStr), "----");
+    if (node->parentNodeSymbol != NULL)
+        snprintf(parentStr, sizeof(parentStr), "%s", node->parentNodeSymbol);
+    else
+        snprintf(parentStr, sizeof(parentStr), "ROOT");
+    snprintf(isLeafStr, sizeof(isLeafStr), "%s", node->isLeafNode ? "yes" : "no");
+    if (!node->isLeafNode && node->nodeSymbol != NULL)
+        snprintf(nodeSymbolStr, sizeof(nodeSymbolStr), "%s", node->nodeSymbol);
+    else
+        snprintf(nodeSymbolStr, sizeof(nodeSymbolStr), "----");
+    fprintf(fp, "%-15s %-5d %-5d %-15s %-15s %-15s %-5s %-15s\n",
+            lexemeStr, currNodeNum, lineNo, tokenNameStr, valueStr, parentStr, isLeafStr, nodeSymbolStr);
 }
 
 void printParseTree(ParseTree *PT, char *outfile) {
