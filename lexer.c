@@ -400,6 +400,11 @@ terminals getKeywordToken(const char *lexeme) {
 
             case 0:
                 c = fetchNextChar();
+                if (c == EOF) {
+                    createToken(&t, END_OF_INPUT, lineCount, "EOF");
+                    setBeginToForward(B);
+                    return t;
+               }
                 lexeme[counter++] = c;
                 if (c == '%')
                     state = 1;
@@ -828,20 +833,22 @@ case 40: {
 
             
 // State 42: After reading 'E' (or 'e') in the number.
+// State 42: After reading 'E' or 'e' in the number.
 case 42: {
     c = fetchNextChar();
     if (c == '+' || c == '-') {
          lexeme[counter++] = c;
-         state = 43;  // Now expect the first exponent digit.
+         state = 43;  // Expect the first exponent digit next.
     } else if (isdigit(c)) {
-         // No sign present; treat this digit as the first exponent digit.
          lexeme[counter++] = c;
-         state = 44;
+         state = 44;  // We already got the first exponent digit.
     } else {
-         state = -1;  // Error.
+         state = -1;  // Error: Expected a digit or sign after E.
     }
     break;
 }
+
+// State 43: After an optional sign, expect the first exponent digit.
 case 43: {
     c = fetchNextChar();
     if (isdigit(c)) {
@@ -852,14 +859,15 @@ case 43: {
     }
     break;
 }
+
 // State 44: Expect the second exponent digit.
 case 44: {
     c = fetchNextChar();
     if (isdigit(c)) {
          lexeme[counter++] = c;
          // Now the exponent part is complete (exactly two digits).
-         // Lookahead: fetch the next character (if any) and then retract it.
-         char look = fetchNextChar();
+         // Lookahead: fetch the next character and then retract it.
+         (void)fetchNextChar(); 
          retract();  
          lexeme[counter] = '\0';
          createToken(&t, TK_RNUM, lineCount, lexeme);
@@ -870,6 +878,7 @@ case 44: {
     }
     break;
 }
+
 
 
 /*// State 45: Finalize the real number token.
@@ -913,15 +922,23 @@ case 45: {
                 else
                     state = 50;
                 break;
-            case 50:
-                lexeme[counter - 1] = '\0';
+                case 50:
+                lexeme[counter - 1] = '\0';  // Terminate lexeme (removing the last extra char)
+                if (strlen(lexeme) > 20) {
+                     createToken(&t, TK_ERROR, lineCount, "Error :Variable Identifier is longer than the prescribed length of 20 characters.");
+                     setBeginToForward(B);
+                     return t;
+                }
+                // If the lexeme is not a keyword, return TK_ID as per your spec.
                 if (checkKeyword(lexeme) != TK_ERROR)
-                    createToken(&t, checkKeyword(lexeme), lineCount, lexeme);
+                     createToken(&t, checkKeyword(lexeme), lineCount, lexeme);
                 else
-                    createToken(&t, TK_FIELDID, lineCount, lexeme);
+                     createToken(&t, TK_ID, lineCount, lexeme);
                 retract();
                 setBeginToForward(B);
                 return t;
+            
+            
             case 51:
                 c = fetchNextChar();
                 lexeme[counter++] = c;
@@ -963,15 +980,23 @@ case 45: {
         
             case 55: {
                 lexeme[counter] = '\0';  // Terminate the lexeme.
+                // Check length using the counter directly.
+                if (counter > 20) {
+                     createToken(&t, TK_ERROR, lineCount, "Error :Variable Identifier is longer than the prescribed length of 20 characters.");
+                     setBeginToForward(B);
+                     return t;
+                }
                 retract();  // Put back the character that did not match.
-                terminals maybeKeyword = checkKeyword(lexeme);
-                if (maybeKeyword != TK_ERROR)
-                     createToken(&t, maybeKeyword, lineCount, lexeme);
+                if (checkKeyword(lexeme) != TK_ERROR)
+                     createToken(&t, checkKeyword(lexeme), lineCount, lexeme);
                 else
-                     createToken(&t, TK_FIELDID, lineCount, lexeme);
+                     createToken(&t, TK_ID, lineCount, lexeme);
                 setBeginToForward(B);
                 return t;
             }
+            
+            
+            
             
 
             // Function identifiers: start with an underscore
