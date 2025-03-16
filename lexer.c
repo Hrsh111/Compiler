@@ -326,7 +326,7 @@ terminals checkKeyword(const char *lexeme) {
     if (strcmp(lexeme, "call") == 0)
         return TK_CALL;
     if (strcmp(lexeme, "real") == 0)  // Add this line
-        return TK_FIELDID;          // Return TK_FIELDID for "real"
+        return TK_REAL;          // Return TK_FIELDID for "real"
     return TK_ERROR;
 }
 
