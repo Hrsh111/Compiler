@@ -488,6 +488,7 @@ ParseTreeNode* createParseTreeNode(const char *symbol) {
     return node;
 }
 
+
 void freeParseTree(ParseTreeNode *root) {
     if (root == NULL)
         return;
@@ -514,7 +515,7 @@ ParseTreeNode* parseInputSourceCode(char *testcaseFile, int parseTable[TOTAL_NON
         token = getNextToken(&twinBuffer);
     
     while (!isStackEmpty(stack)) {
-        // Skip comment tokens that might appear mid-parsing.
+
         while (token.token == TK_COMMENT)
             token = getNextToken(&twinBuffer);
         
@@ -534,9 +535,7 @@ ParseTreeNode* parseInputSourceCode(char *testcaseFile, int parseTable[TOTAL_NON
                 return NULL;
             }
         } else {
-            // Special handling for option_single_constructed:
-            // If the nonterminal is option_single_constructed and the lookahead is not a dot,
-            // select its ε–production.
+           
             if (strcmp(X, "option_single_constructed") == 0 && token.token != TK_DOT) {
                 pop(stack);
                 continue;

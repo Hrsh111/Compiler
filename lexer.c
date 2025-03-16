@@ -20,8 +20,7 @@ TwinBuffer twinBuffer;
 Symboltable *table = NULL;
 keyword *kwEntries[KC] = {NULL};
 
-/* Function Prototypes (if not in header) */
-// You might have prototypes in your headers; if not, add them here.
+
 
 FILE *initialise(char *inputFile) {
     srcFile = fopen(inputFile, "r");  
@@ -30,7 +29,7 @@ FILE *initialise(char *inputFile) {
         return NULL;
     }
 
-    // Read into first buffer
+
     int size = (int)fread(twinBuffer.buffer1, sizeof(char), BUFFER_SIZE, srcFile);
     if (size == 0 && ferror(srcFile)) {
         printf("ERROR: Failed to read from file: %s\n", inputFile);
@@ -38,10 +37,10 @@ FILE *initialise(char *inputFile) {
         return NULL;
     }
 
-    // Mark the end of the buffer with a special character.
+
     if (size < BUFFER_SIZE) {
         if (size >= 0)
-            twinBuffer.buffer1[size] = '\0';  // using '\0' as end marker
+            twinBuffer.buffer1[size] = '\0'; 
         exhaustedInput = true;
     } else {
         exhaustedInput = false;
@@ -89,10 +88,9 @@ FILE *getStream(FILE *fp) {
     return fp;
 }
 
-/* Keyword and Symbol Table Functions */
+
 void initializeKeywords() {
-    /* Note: The reservedList has 29 entries. Ensure KC is updated accordingly (e.g., KC = 29)
-       if you intend to use all of them. */
+  
     static keyword reservedList[] = {
         {"identifier", TK_ID},
         {"_main", TK_MAIN},
@@ -144,7 +142,7 @@ void initializeSymbolTable(Symboltable **table) {
     }
     initializeKeywords();
 
-    /* Insert keywords into the symbol table */
+
     int numKeywords = sizeof(kwEntries) / sizeof(kwEntries[0]);
     for (int i = 0; i < numKeywords; i++) {
         if (kwEntries[i] != NULL) {
@@ -203,18 +201,18 @@ void insert(const char *lexeme, terminals token) {
     }
 }
 
-/* Pointer management functions using fetchNextChar exclusively */
+
 char fetchNextChar(void) {
-    /* Check if we are at the end of the current buffer and need a switch */
+
     if (activeBuffer == 1 && forward >= twinBuffer.buffer1 + BUFFER_SIZE) {
         getStream(srcFile);
     } else if (activeBuffer == 2 && forward >= twinBuffer.buffer2 + BUFFER_SIZE) {
         getStream(srcFile);
     }
     char c = *forward;
-    if (c == '\0')  // if end-of-buffer marker reached
+    if (c == '\0') 
         return EOF;
-    forward++;  // advance pointer
+    forward++; 
     return c;
 }
 
@@ -225,7 +223,7 @@ void retract(void) {
 }
 
 void setBeginToForward(TwinBuffer *B) {
-    (void)B; // unused parameter
+    (void)B; 
     lexemebegin = forward;
 }
 
@@ -258,15 +256,15 @@ void stripComments(char *testcaseFile, char *cleanFile) {
     fclose(outFile);
 }
 
-/* Modified ignoreComment using fetchNextChar */
+
 void ignoreComment(TwinBuffer *B) {
-    (void)B; // unused in this implementation
+    (void)B; 
     char c;
-    // Consume characters until a newline or end-of-buffer is reached.
+
     while ((c = *forward) != '\n' && c != '\0') {
-        fetchNextChar();  // advances pointer
+        fetchNextChar(); 
     }
-    // If newline is encountered, consume it and update line count.
+
     if (*forward == '\n') {
         fetchNextChar();
         lineCount++;
@@ -329,10 +327,10 @@ terminals checkKeyword(const char *lexeme) {
         return TK_ELSE;
     if (strcmp(lexeme, "call") == 0)
         return TK_CALL;
-    if (strcmp(lexeme, "real") == 0)  // Add this line
-        return TK_REAL;          // Return TK_FIELDID for "real"
+    if (strcmp(lexeme, "real") == 0)  
+        return TK_REAL;        
         if (strcmp(lexeme, "input") == 0)
-        return TK_INPUT;   // <-- Added for "input"
+        return TK_INPUT;  
         if(strcmp(lexeme, "int")==0)
         return TK_INT;
     if (strcmp(lexeme, "output") == 0)
@@ -354,7 +352,7 @@ terminals checkKeyword(const char *lexeme) {
     while (1) {
         switch (state) {
             case -1:
-                // Error state: report error, skip the offending character, and return error token.
+
                 createToken(&t, TK_ERROR, lineCount, lexeme);
                 setBeginToForward(B);
                 return t;
@@ -406,7 +404,7 @@ terminals checkKeyword(const char *lexeme) {
                 else if (c == '>')
                     state = 24;
                 else if (c == '<')
-                    state = 27;  // New consolidated handling for '<'
+                    state = 27; 
                 else if (c == '#')
                     state = 33;
                 else if (c == '=')
@@ -423,14 +421,14 @@ terminals checkKeyword(const char *lexeme) {
                     state = -1;
                 break;
 
-            // Case 1: Comment: return TK_COMMENT and ignore rest of line.
+
             case 1:
                 createToken(&t, TK_COMMENT, lineCount, lexeme);
                 ignoreComment(B);
                 setBeginToForward(B);
                 return t;
 
-            // Single character tokens...
+
             case 2:
                 createToken(&t, TK_SQR, lineCount, lexeme);
                 setBeginToForward(B);
@@ -483,7 +481,7 @@ terminals checkKeyword(const char *lexeme) {
                 createToken(&t, TK_NOT, lineCount, lexeme);
                 setBeginToForward(B);
                 return t;
-            // Two-character token: "!="
+
             case 15:
                 c = fetchNextChar();
                 lexeme[counter++] = c;
@@ -495,7 +493,7 @@ terminals checkKeyword(const char *lexeme) {
                 }
                 return t;
 
-            // Logical AND handling: expecting exactly three '&'
+
             case 17: {
                 c = fetchNextChar();
                 if (c == '&') {
@@ -528,7 +526,7 @@ terminals checkKeyword(const char *lexeme) {
                 break;
             }
 
-            // Logical OR: expecting exactly three '@'
+
             case 20:
                 c = fetchNextChar();
                 lexeme[counter++] = c;
@@ -560,7 +558,7 @@ terminals checkKeyword(const char *lexeme) {
                 state = 0;
                 break;
 
-            // Greater-than tokens (">" or ">=")
+
             case 24:
                 c = fetchNextChar();
                 lexeme[counter++] = c;
@@ -580,7 +578,7 @@ terminals checkKeyword(const char *lexeme) {
                 setBeginToForward(B);
                 return t;
 
-            // Less-than tokens: now consolidated assignment operator handling in state 27.
+
             case 27:
                 c = fetchNextChar();
                 if (c == '=') {
@@ -590,7 +588,7 @@ terminals checkKeyword(const char *lexeme) {
                     return t;
                 } else if (c == '-') {
                     lexeme[counter++] = c;
-                    // Expect two more '-' characters for the assignment operator.
+
                     c = fetchNextChar();
                     if (c == '-') {
                         lexeme[counter++] = c;
@@ -601,12 +599,12 @@ terminals checkKeyword(const char *lexeme) {
                             setBeginToForward(B);
                             return t;
                         } else {
-                            // Pattern "<--" is not valid; retract and signal error.
+
                             retract();
                             state = -1;
                         }
                     } else {
-                        // Pattern "<-" is not valid; retract and signal error.
+
                         retract();
                         state = -1;
                     }
@@ -621,7 +619,7 @@ terminals checkKeyword(const char *lexeme) {
                 setBeginToForward(B);
                 return t;
 
-            // Reserved word/identifier starting with '#' (RUID)
+
             case 33:
                 c = fetchNextChar();
                 lexeme[counter++] = c;
@@ -645,7 +643,7 @@ terminals checkKeyword(const char *lexeme) {
                 setBeginToForward(B);
                 return t;
 
-            // Equal sign (==)
+
             case 36:
                 c = fetchNextChar();
                 lexeme[counter++] = c;
@@ -659,7 +657,7 @@ terminals checkKeyword(const char *lexeme) {
                 setBeginToForward(B);
                 return t;
 
-            // Numeric literals (integers and reals)
+
             case 38: {
                 c = fetchNextChar();
                 if (isdigit(c)) {
@@ -770,7 +768,7 @@ terminals checkKeyword(const char *lexeme) {
                 setBeginToForward(B);
                 return t;
             
-            // Identifiers/reserved words starting with b, c, or d.
+
             case 48:
                 c = fetchNextChar();
                 if (islower(c)) {
@@ -874,7 +872,7 @@ terminals checkKeyword(const char *lexeme) {
                 setBeginToForward(B);
                 return t;
             }
-            // Function identifiers: start with an underscore.
+
             case 56:
                 c = fetchNextChar();
                 lexeme[counter++] = c;
@@ -914,6 +912,6 @@ terminals checkKeyword(const char *lexeme) {
             default:
                 state = -1;
                 break;
-        } // end switch
-    } // end while
+        } 
+    } 
 }
