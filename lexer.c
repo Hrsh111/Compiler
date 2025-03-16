@@ -325,8 +325,11 @@ terminals checkKeyword(const char *lexeme) {
         return TK_ELSE;
     if (strcmp(lexeme, "call") == 0)
         return TK_CALL;
+    if (strcmp(lexeme, "real") == 0)  // Add this line
+        return TK_FIELDID;          // Return TK_FIELDID for "real"
     return TK_ERROR;
 }
+
 
 terminals getKeywordToken(const char *lexeme) {
     if (strcmp(lexeme, "with") == 0)
@@ -923,13 +926,15 @@ case 45: {
                     state = 50;
                 break;
                 case 50:
-                lexeme[counter - 1] = '\0';  // Terminate lexeme (removing the last extra char)
+                // Terminate the lexeme without subtracting one.
+                lexeme[counter] = '\0';
                 if (strlen(lexeme) > 20) {
-                     createToken(&t, TK_ERROR, lineCount, "Error :Variable Identifier is longer than the prescribed length of 20 characters.");
+                     createToken(&t, TK_ERROR, lineCount,
+                        "Error: Variable Identifier is longer than the prescribed length of 20 characters.");
                      setBeginToForward(B);
                      return t;
                 }
-                // If the lexeme is not a keyword, return TK_ID as per your spec.
+                // Then check if it's a keyword; if not, create TK_ID.
                 if (checkKeyword(lexeme) != TK_ERROR)
                      createToken(&t, checkKeyword(lexeme), lineCount, lexeme);
                 else
@@ -937,6 +942,9 @@ case 45: {
                 retract();
                 setBeginToForward(B);
                 return t;
+            
+            
+            
             
             
             case 51:
@@ -949,12 +957,20 @@ case 45: {
                 else
                     state = 52;
                 break;
-            case 52:
+                case 52:
                 lexeme[counter - 1] = '\0';
+                // Add a length check here using strlen(lexeme)
+                if (strlen(lexeme) > 20) {
+                     createToken(&t, TK_ERROR, lineCount,
+                        "Error: Variable Identifier is longer than the prescribed length of 20 characters.");
+                     setBeginToForward(B);
+                     return t;
+                }
                 createToken(&t, TK_ID, lineCount, lexeme);
                 retract();
                 setBeginToForward(B);
                 return t;
+            
             case 53:
                 c = fetchNextChar();
                 lexeme[counter++] = c;
@@ -980,20 +996,27 @@ case 45: {
         
             case 55: {
                 lexeme[counter] = '\0';  // Terminate the lexeme.
-                // Check length using the counter directly.
-                if (counter > 20) {
-                     createToken(&t, TK_ERROR, lineCount, "Error :Variable Identifier is longer than the prescribed length of 20 characters.");
+
+                if (strlen(lexeme) > 20) {
+                     createToken(&t, TK_ERROR, lineCount,
+                        "Error: Variable Identifier is longer than the prescribed length of 20 characters.");
                      setBeginToForward(B);
                      return t;
                 }
-                retract();  // Put back the character that did not match.
-                if (checkKeyword(lexeme) != TK_ERROR)
-                     createToken(&t, checkKeyword(lexeme), lineCount, lexeme);
+                retract();  // Put back the non-matching character.
+                terminals maybeKeyword = checkKeyword(lexeme);
+                if (maybeKeyword != TK_ERROR)
+                     createToken(&t, maybeKeyword, lineCount, lexeme);
                 else
                      createToken(&t, TK_ID, lineCount, lexeme);
                 setBeginToForward(B);
                 return t;
             }
+            
+            
+            
+            
+            
             
             
             
